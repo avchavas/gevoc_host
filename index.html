@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>SIG Voirie & Patrimoine - Grist Connect</title>
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <!-- Tailwind CSS pour l'UI -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Grist Plugin API -->
+    <script src="https://docs.getgrist.com/grist-plugin-api.js"></script>
+    <style>
+        body { font-family: system-ui, -apple-system, sans-serif; }
+        #map { height: calc(100vh - 4rem); z-index: 10; }
+        .sidebar-transition { transition: transform 0.3s ease-in-out; }
+    </style>
+</head>
+<body class="bg-slate-100 h-screen flex flex-col overflow-hidden">
+
+    <!-- Barre de Navigation Supérieure -->
+    <header class="bg-slate-900 text-white h-16 flex items-center justify-between px-6 shadow-md z-30">
+        <div class="flex items-center space-x-6">
+            <h1 class="font-bold text-lg text-emerald-400 flex items-center gap-2">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"></path></svg>
+                SIG Voirie & Patrimoine
+            </h1>
+            <nav class="flex space-x-1 bg-slate-800 p-1 rounded-lg">
+                <button onclick="switchNetworkObject('chaussee')" id="btn-obj-chaussee" class="px-4 py-1.5 rounded-md text-sm font-medium bg-emerald-600 text-white transition">Chaussée</button>
+                <button onclick="switchNetworkObject('ouvrages')" id="btn-obj-ouvrages" class="px-4 py-1.5 rounded-md text-sm font-medium text-slate-300 hover:bg-slate-700 transition">Ouvrages d'Art</button>
+                <button onclick="switchNetworkObject('signalisation')" id="btn-obj-signalisation" class="px-4 py-1.5 rounded-md text-sm font-medium text-slate-300 hover:bg-slate-700 transition">Signalisation</button>
+                <button onclick="switchNetworkObject('assainissement')" id="btn-obj-assainissement" class="px-4 py-1.5 rounded-md text-sm font-medium text-slate-300 hover:bg-slate-700 transition">Assainissement</button>
+            </nav>
+        </div>
+        <div class="flex items-center space-x-3">
+            <span id="grist-status" class="text-xs bg-amber-500/20 text-amber-300 px-3 py-1.5 rounded-full border border-amber-500/30 flex items-center gap-2">
+                <span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span> Connexion Grist...
+            </span>
+            <button onclick="openConfigModal()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-3.5 py-2 rounded-lg text-sm font-medium flex items-center gap-2 shadow transition">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path></svg>
+                Assignation des champs & Sauvegarde
+            </button>
+        </div>
+    </header>
+
+    <!-- Corps Principal -->
+    <div class="flex-1 flex relative overflow-hidden">
+
+        <!-- Panneau Latéral Gauche -->
+        <aside class="w-80 bg-white border-r border-slate-200 flex flex-col z-20 shadow-lg">
+            <div class="p-4 border-b border-slate-100 bg-slate-50">
+                <h2 id="current-object-title" class="font-bold text-slate-800 text-base">Objet : Chaussée</h2>
+                <p class="text-xs text-slate-500 mt-0.5">Navigation par volets métiers</p>
+            </div>
+
+            <!-- Onglets -->
+            <div class="grid grid-cols-2 gap-1 p-2 bg-slate-100 border-b border-slate-200 text-xs font-medium">
+                <button onclick="switchView('patrimoine')" id="tab-patrimoine" class="py-2 px-2 bg-white rounded shadow-sm text-emerald-700 font-semibold transition">1. Patrimoine</button>
+                <button onclick="switchView('usage')" id="tab-usage" class="py-2 px-2 text-slate-600 hover:bg-white/50 rounded transition">2. Usage</button>
+                <button onclick="switchView('pathologies')" id="tab-pathologies" class="py-2 px-2 text-slate-600 hover:bg-white/50 rounded transition">3. Pathologies</button>
+                <button onclick="switchView('programmation')" id="tab-programmation" class="py-2 px-2 text-slate-600 hover:bg-white/50 rounded transition">4. Programmation</button>
+            </div>
+
+            <!-- Contrôles dynamiques -->
+            <div class="flex-1 overflow-y-auto p-4 space-y-4" id="view-controls-container"></div>
+        </aside>
+
+        <!-- Carte -->
+        <main class="flex-1 relative">
+            <div id="map"></div>
+        </main>
+
+        <!-- Volet Latéral Droit (Fiche d'identification) -->
+        <div id="right-drawer" class="w-96 bg-white border-l border-slate-200 shadow-2xl absolute right-0 top-0 bottom-0 z-30 transform translate-x-full sidebar-transition flex flex-col">
+            <div class="p-4 bg-slate-800 text-white flex items-center justify-between">
+                <h3 class="font-semibold text-sm flex items-center gap-2">
+                    <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    Fiche détaillée de l'entité
+                </h3>
+                <button onclick="closeDrawer()" class="text-slate-400 hover:text-white text-lg">&times;</button>
+            </div>
+            <div class="flex-1 overflow-y-auto p-4 space-y-3 text-sm" id="drawer-content">
+                <p class="text-slate-400 text-center py-12">Sélectionnez un tronçon sur la carte pour afficher ses données patrimoniales et d'état.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Avancé d'Assignation des Champs -->
+    <div id="config-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-xl shadow-2xl max-w-4xl w-full overflow-hidden flex flex-col max-h-[90vh]">
+            <div class="p-5 bg-slate-900 text-white flex justify-between items-center">
+                <div class="flex items-center gap-3">
+                    <h3 class="font-bold text-lg">Assignation exhaustive des champs Grist</h3>
+                    <span class="text-xs bg-emerald-500/20 text-emerald-300 px-2.5 py-0.5 rounded-full border border-emerald-500/30">Sauvegardé automatiquement</span>
+                </div>
+                <button onclick="closeConfigModal()" class="text-slate-400 hover:text-white text-2xl">&times;</button>
+            </div>
+            <div class="p-6 overflow-y-auto space-y-6 text-sm text-slate-700">
+                <p class="text-xs bg-emerald-50 text-emerald-800 p-3 rounded-lg border border-emerald-200">
+                    Sélectionnez votre table Grist principale, puis associez chaque attribut métier à la colonne correspondante de votre base. Vos choix sont mémorisés localement sur votre poste.
+                </p>
+
+                <!-- Sélection de la Table -->
+                <div class="bg-slate-50 p-4 rounded-lg border border-slate-200">
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-2">Table Grist active :</label>
+                    <select id="select-table" onchange="onTableChange()" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm bg-white font-medium"></select>
+                </div>
+
+                <!-- Grille d'assignation des champs -->
+                <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Champ Géométrie (WKT/GeoJSON)</label>
+                        <select id="field-geom" class="field-select w-full border border-slate-300 rounded p-2 text-xs bg-white"></select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">ID du tronçon</label>
+                        <select id="field-id_troncon" class="field-select w-full border border-slate-300 rounded p-2 text-xs bg-white"></select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Commune</label>
+                        <select id="field-commune" class="field-select w-full border border-slate-300 rounded p-2 text-xs bg-white"></select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Longueur</label>
+                        <select id="field-longueur" class="field-select w-full border border-slate-300 rounded p-2 text-xs bg-white"></select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Classification domaniale</label>
+                        <select id="field-domanialite" class="field-select w-full border border-slate-300 rounded p-2 text-xs bg-white"></select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Structure de chaussée</label>
+                        <select id="field-structure" class="field-select w-full border border-slate-300 rounded p-2 text-xs bg-white"></select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Âge</label>
+                        <select id="field-age" class="field-select w-full border border-slate-300 rounded p-2 text-xs bg-white"></select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Niveaux de trafic</label>
+                        <select id="field-trafic" class="field-select w-full border border-slate-300 rounded p-2 text-xs bg-white"></select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Fonction de la voie</label>
+                        <select id="field-fonction" class="field-select w-full border border-slate-300 rounded p-2 text-xs bg-white"></select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Catégorie de la voie</label>
+                        <select id="field-categorie" class="field-select w-full border border-slate-300 rounded p-2 text-xs bg-white"></select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Gravité défauts surface</label>
+                        <select id="field-grav_surf" class="field-select w-full border border-slate-300 rounded p-2 text-xs bg-white"></select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Étendue défauts surface</label>
+                        <select id="field-etend_surf" class="field-select w-full border border-slate-300 rounded p-2 text-xs bg-white"></select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Gravité fissure</label>
+                        <select id="field-grav_fissure" class="field-select w-full border border-slate-300 rounded p-2 text-xs bg-white"></select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Étendue fissure</label>
+                        <select id="field-etend_fissure" class="field-select w-full border border-slate-300 rounded p-2 text-xs bg-white"></select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Gravité nid de poule</label>
+                        <select id="field-grav_nid" class="field-select w-full border border-slate-300 rounded p-2 text-xs bg-white"></select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Étendue nid de poule</label>
+                        <select id="field-etend_nid" class="field-select w-full border border-slate-300 rounded p-2 text-xs bg-white"></select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Indicateur état surface</label>
+                        <select id="field-etat_surf" class="field-select w-full border border-slate-300 rounded p-2 text-xs bg-white"></select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Indicateur état structure</label>
+                        <select id="field-etat_struct" class="field-select w-full border border-slate-300 rounded p-2 text-xs bg-white"></select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Note de priorité</label>
+                        <select id="field-prio" class="field-select w-full border border-slate-300 rounded p-2 text-xs bg-white"></select>
+                    </div>
+                </div>
+            </div>
+            <div class="p-4 bg-slate-50 border-t border-slate-200 flex justify-end gap-3">
+                <button onclick="closeConfigModal()" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg text-sm font-medium">Annuler</button>
+                <button onclick="saveConfigAndReload()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-medium shadow">Enregistrer et Appliquer</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        let currentObject = 'chaussee';
+        let currentView = 'patrimoine';
+        let map, geoJsonLayer;
+        let gristData = [];
+        let availableTables = [];
+        let tableColumns = [];
+
+        // Configuration par défaut sauvegardée ou initiale
+        let mappingConfig = JSON.parse(localStorage.getItem('sig_voirie_mapping')) || {
+            table: '',
+            geom: 'geometry',
+            id_troncon: 'id',
+            commune: 'commune',
+            longueur: 'longueur',
+            domanialite: 'domanialite',
+            structure: 'structure',
+            age: 'age',
+            trafic: 'trafic',
+            fonction: 'fonction',
+            categorie: 'categorie',
+            grav_surf: 'grav_surf',
+            etend_surf: 'etend_surf',
+            grav_fissure: 'grav_fissure',
+            etend_fissure: 'etend_fissure',
+            grav_nid: 'grav_nid',
+            etend_nid: 'etend_nid',
+            etat_surf: 'etat_surf',
+            etat_struct: 'etat_struct',
+            prio: 'Note_Prio'
+        };
+
+        function initMap() {
+            map = L.map('map').setView([46.075, 4.375], 13);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 19,
+                attribution: '© OpenStreetMap'
+            }).addTo(map);
+        }
+
+        function parseWKT(wktString) {
+            if (!wktString || typeof wktString !== 'string') return null;
+            wktString = wktString.trim();
+            try {
+                if (wktString.startsWith('MULTILINESTRING')) {
+                    const coordsSets = wktString.match(/\(([^()]+)\)/g);
+                    let multiCoords = [];
+                    if (coordsSets) {
+                        coordsSets.forEach(set => {
+                            const cleanSet = set.replace(/[()]/g, '');
+                            const points = cleanSet.split(',').map(pt => {
+                                const parts = pt.trim().split(/\s+/);
+                                return [parseFloat(parts[1]), parseFloat(parts[0])];
+                            });
+                            multiCoords.push(points);
+                        });
+                    }
+                    return { type: "MultiLineString", coordinates: multiCoords };
+                } else if (wktString.startsWith('LINESTRING')) {
+                    const match = wktString.match(/\((.*?)\)/);
+                    if (!match) return null;
+                    const points = match[1].split(',').map(pt => {
+                        const parts = pt.trim().split(/\s+/);
+                        return [parseFloat(parts[1]), parseFloat(parts[0])];
+                    });
+                    return { type: "LineString", coordinates: points };
+                }
+            } catch (e) {
+                console.error("Erreur WKT:", e);
+            }
+            return null;
+        }
+
+        function initGrist() {
+            if (typeof grist !== 'undefined' && grist.ready) {
+                grist.ready({ requiredAccess: 'full' });
+                
+                grist.onRecords(function(records) {
+                    gristData = records;
+                    updateStatus("Connecté à Grist (" + records.length + " entités)", "success");
+                    if (records.length > 0 && !tableColumns.length) {
+                        tableColumns = Object.keys(records[0]);
+                        updateFieldDropdowns();
+                    }
+                    renderDataOnMap();
+                });
+
+                if (grist.docApi && grist.docApi.listTables) {
+                    grist.docApi.listTables().then(tables => {
+                        availableTables = tables;
+                        populateTableSelect(tables);
+                    }).catch(err => console.log("Erreur tables Grist:", err));
+                }
+            } else {
+                updateStatus("Mode démonstration (Hors Grist)", "warning");
+                loadDemoData();
+            }
+        }
+
+        function updateStatus(text, type) {
+            const el = document.getElementById('grist-status');
+            el.innerHTML = `<span class="w-2 h-2 rounded-full ${type === 'success' ? 'bg-emerald-400' : 'bg-amber-400'}"></span> ${text}`;
+        }
+
+        function populateTableSelect(tables) {
+            const select = document.getElementById('select-table');
+            select.innerHTML = '';
+            tables.forEach(t => {
+                const opt = document.createElement('option');
+                opt.value = t;
+                opt.textContent = t;
+                if (t === mappingConfig.table) opt.selected = true;
+                select.appendChild(opt);
+            });
+            if (!mappingConfig.table && tables.length > 0) {
+                mappingConfig.table = tables[0];
+            }
+        }
+
+        function onTableChange() {
+            const select = document.getElementById('select-table');
+            mappingConfig.table = select.value;
+        }
+
+        function updateFieldDropdowns() {
+            const selects = document.querySelectorAll('.field-select');
+            selects.forEach(select => {
+                const currentVal = select.value;
+                select.innerHTML = '<option value="">-- Aucun / Non assigné --</option>';
+                tableColumns.forEach(col => {
+                    const opt = document.createElement('option');
+                    opt.value = col;
+                    opt.textContent = col;
+                    select.appendChild(opt);
+                });
+            });
+
+            // Pré-sélectionner avec la config enregistrée
+            for (const [key, colName] of Object.entries(mappingConfig)) {
+                const el = document.getElementById(`field-${key}`);
+                if (el) el.value = colName;
+            }
+        }
+
+        function renderDataOnMap() {
+            if (geoJsonLayer) map.removeLayer(geoJsonLayer);
+
+            const features = [];
+            gristData.forEach(row => {
+                const geomRaw = row[mappingConfig.geom];
+                let coordsData = null;
+
+                if (typeof geomRaw === 'string') {
+                    coordsData = parseWKT(geomRaw);
+                } else if (typeof geomRaw === 'object' && geomRaw !== null) {
+                    coordsData = geomRaw;
+                }
+
+                if (coordsData) {
+                    features.push({
+                        type: "Feature",
+                        geometry: coordsData,
+                        properties: row
+                    });
+                }
+            });
+
+            if (features.length === 0) return;
+
+            geoJsonLayer = L.geoJSON({ type: "FeatureCollection", features: features }, {
+                style: function(feature) {
+                    let color = '#3b82f6';
+                    const props = feature.properties;
+
+                    if (currentView === 'patrimoine') {
+                        const dom = props[mappingConfig.domanialite];
+                        if (dom === 'Rue') color = '#10b981';
+                        else if (dom === 'Chemin') color = '#f59e0b';
+                        else if (dom === 'Place') color = '#8b5cf6';
+                    } else if (currentView === 'programmation') {
+                        const prio = props[mappingConfig.prio];
+                        if (prio > 7) color = '#ef4444';
+                        else if (prio > 4) color = '#f97316';
+                        else color = '#22c55e';
+                    } else if (currentView === 'pathologies') {
+                        const fiss = props[mappingConfig.grav_fissure];
+                        if (fiss > 3) color = '#dc2626';
+                        else color = '#64748b';
+                    }
+
+                    return { color: color, weight: 4, opacity: 0.85 };
+                },
+                onEachFeature: function(feature, layer) {
+                    layer.on('click', function() {
+                        openDrawerWithData(feature.properties);
+                        if (window.grist && grist.setSelectedRows) {
+                            grist.setSelectedRows([feature.properties[mappingConfig.id_troncon] || feature.properties.id]);
+                        }
+                    });
+                }
+            }).addTo(map);
+
+            try {
+                map.fitBounds(geoJsonLayer.getBounds());
+            } catch(e) {}
+        }
+
+        function switchNetworkObject(obj) {
+            currentObject = obj;
+            ['chaussee', 'ouvrages', 'signalisation', 'assainissement'].forEach(o => {
+                const btn = document.getElementById(`btn-obj-${o}`);
+                if (o === obj) {
+                    btn.className = "px-4 py-1.5 rounded-md text-sm font-medium bg-emerald-600 text-white transition";
+                } else {
+                    btn.className = "px-4 py-1.5 rounded-md text-sm font-medium text-slate-300 hover:bg-slate-700 transition";
+                }
+            });
+            document.getElementById('current-object-title').textContent = "Objet : " + capitalize(obj);
+            updateViewControls();
+        }
+
+        function switchView(view) {
+            currentView = view;
+            ['patrimoine', 'usage', 'pathologies', 'programmation'].forEach(v => {
+                const tab = document.getElementById(`tab-${v}`);
+                if (v === view) {
+                    tab.className = "py-2 px-2 bg-white rounded shadow-sm text-emerald-700 font-semibold transition";
+                } else {
+                    tab.className = "py-2 px-2 text-slate-600 hover:bg-white/50 rounded transition";
+                }
+            });
+            updateViewControls();
+            renderDataOnMap();
+        }
+
+        function updateViewControls() {
+            const container = document.getElementById('view-controls-container');
+            if (currentView === 'patrimoine') {
+                container.innerHTML = `
+                    <div class="space-y-3">
+                        <label class="block text-xs font-semibold text-slate-700">Visualisation Patrimoniale :</label>
+                        <select onchange="renderDataOnMap()" class="w-full border border-slate-300 rounded p-2 text-xs bg-white">
+                            <option>Filaire du réseau (Symbologie simple)</option>
+                            <option>Classification domaniale</option>
+                            <option>Structure de chaussée</option>
+                            <option>Âge de la structure</option>
+                        </select>
+                        <p class="text-xs text-slate-500">Données structurelles et historiques du réseau.</p>
+                    </div>
+                `;
+            } else if (currentView === 'usage') {
+                container.innerHTML = `
+                    <div class="space-y-3">
+                        <label class="block text-xs font-semibold text-slate-700">Usage & Sollicitations :</label>
+                        <select class="w-full border border-slate-300 rounded p-2 text-xs bg-white">
+                            <option>Niveaux de trafic</option>
+                            <option>Fonction de la voie</option>
+                            <option>Catégorie de la voie</option>
+                        </select>
+                        <label class="block text-xs font-semibold text-slate-700 mt-4">Aléas naturels :</label>
+                        <select class="w-full border border-slate-300 rounded p-2 text-xs bg-white">
+                            <option value="">Sélectionner un aléa...</option>
+                            <option>Retrait-Gonflement Argiles (RGA)</option>
+                            <option>Inondation / Ruissellement</option>
+                        </select>
+                    </div>
+                `;
+            } else if (currentView === 'pathologies') {
+                container.innerHTML = `
+                    <div class="space-y-3">
+                        <label class="block text-xs font-semibold text-slate-700">Pathologie spécifique :</label>
+                        <select class="w-full border border-slate-300 rounded p-2 text-xs bg-white">
+                            <option>Fissures (Gravité / Étendue)</option>
+                            <option>Nids-de-poule</option>
+                            <option>Déformations de chaussée / rive</option>
+                            <option>Défauts de surface</option>
+                        </select>
+                        <label class="block text-xs font-semibold text-slate-700 mt-4">Indicateur d'état global :</label>
+                        <select class="w-full border border-slate-300 rounded p-2 text-xs bg-white">
+                            <option>Indicateur d'état de surface</option>
+                            <option>Indicateur d'état de structure</option>
+                        </select>
+                    </div>
+                `;
+            } else if (currentView === 'programmation') {
+                container.innerHTML = `
+                    <div class="space-y-3">
+                        <label class="block text-xs font-semibold text-slate-700">Programmation & Priorités :</label>
+                        <select onchange="renderDataOnMap()" class="w-full border border-slate-300 rounded p-2 text-xs bg-white">
+                            <option>Note de priorité</option>
+                            <option>Gravité réparation</option>
+                        </select>
+                        <div class="bg-emerald-50 p-3 rounded-lg border border-emerald-100 text-xs text-emerald-900 mt-4">
+                            <p class="font-semibold">Synthèse de programmation :</p>
+                            <p class="mt-1">Linéaire prioritaire : <strong>Actif</strong></p>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        function openDrawerWithData(props) {
+            const drawer = document.getElementById('right-drawer');
+            const content = document.getElementById('drawer-content');
+            drawer.classList.remove('translate-x-full');
+
+            let html = `<div class="space-y-3">`;
+            for (const [key, val] of Object.entries(props)) {
+                html += `<div class="bg-slate-50 p-2.5 rounded border border-slate-100">
+                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">${key}</span>
+                    <p class="text-slate-800 font-medium text-xs mt-0.5">${val !== null && val !== undefined ? val : 'Non renseigné'}</p>
+                </div>`;
+            }
+            html += `</div>`;
+            content.innerHTML = html;
+        }
+
+        function closeDrawer() {
+            document.getElementById('right-drawer').classList.add('translate-x-full');
+        }
+
+        function openConfigModal() {
+            updateFieldDropdowns();
+            document.getElementById('config-modal').classList.remove('hidden');
+        }
+
+        function closeConfigModal() {
+            document.getElementById('config-modal').classList.add('hidden');
+        }
+
+        function saveConfigAndReload() {
+            for (const key of Object.keys(mappingConfig)) {
+                if (key !== 'table') {
+                    const el = document.getElementById(`field-${key}`);
+                    if (el) mappingConfig[key] = el.value;
+                }
+            }
+            // Sauvegarde persistante dans le navigateur
+            localStorage.setItem('sig_voirie_mapping', JSON.stringify(mappingConfig));
+            closeConfigModal();
+            renderDataOnMap();
+        }
+
+        function loadDemoData() {
+            tableColumns = ['id', 'commune', 'longueur', 'domanialite', 'structure', 'age', 'trafic', 'Note_Prio', 'grav_fissure', 'geometry'];
+            gristData = [
+                { id: 1, commune: "Saint-Vincent", longueur: 1250, domanialite: "Rue", structure: "Enrobé", age: 4, trafic: 2, Note_Prio: 8, grav_fissure: 4, geometry: "MULTILINESTRING ((4.369 46.079, 4.375 46.082))" },
+                { id: 2, commune: "Amplepuis", longueur: 820, domanialite: "Chemin", structure: "Enduit", age: 12, trafic: 1, Note_Prio: 3, grav_fissure: 1, geometry: "MULTILINESTRING ((4.375 46.082, 4.381 46.085))" }
+            ];
+            updateFieldDropdowns();
+            renderDataOnMap();
+        }
+
+        function capitalize(s) {
+            return s.charAt(0).toUpperCase() + s.slice(1);
+        }
+
+        window.onload = function() {
+            initMap();
+            initGrist();
+            updateViewControls();
+        };
+    </script>
+</body>
+</html>

@@ -2,560 +2,1159 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>SIG Voirie & Patrimoine - Grist Connect</title>
-    <!-- Leaflet CSS -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <!-- Tailwind CSS pour l'UI -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SIG Patrimonial Voirie - Widget Grist</title>
+
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Grist Plugin API -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
     <script src="https://docs.getgrist.com/grist-plugin-api.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@0.469.0/dist/umd/lucide.min.js"></script>
+
     <style>
-        body { font-family: system-ui, -apple-system, sans-serif; }
-        #map { height: calc(100vh - 4rem); z-index: 10; }
-        .sidebar-transition { transition: transform 0.3s ease-in-out; }
+        body { font-family: 'Inter', sans-serif; margin: 0; padding: 0; overflow: hidden; }
+        #map { width: 100%; height: 100%; z-index: 1; }
+        .custom-scrollbar::-webkit-scrollbar { width: 5px; height: 5px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 20px; }
+        .radio-card:has(input:checked) { background-color: #f0f9ff; border-color: #0284c7; box-shadow: 0 1px 3px rgba(2,132,199,.12); }
+        .radio-card:has(input:checked) .radio-dot { border-color: #0284c7; background-color: #0284c7; }
+        .radio-card:has(input:checked) .radio-dot::after { content: ''; display: block; width: 6px; height: 6px; border-radius: 50%; background: white; }
     </style>
 </head>
-<body class="bg-slate-100 h-screen flex flex-col overflow-hidden">
+<body class="bg-slate-100 text-slate-800 antialiased h-screen flex flex-col overflow-hidden">
 
-    <!-- Barre de Navigation Supérieure -->
-    <header class="bg-slate-900 text-white h-16 flex items-center justify-between px-6 shadow-md z-30">
-        <div class="flex items-center space-x-6">
-            <h1 class="font-bold text-lg text-emerald-400 flex items-center gap-2">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"></path></svg>
-                SIG Voirie & Patrimoine
-            </h1>
-            <nav class="flex space-x-1 bg-slate-800 p-1 rounded-lg">
-                <button onclick="switchNetworkObject('chaussee')" id="btn-obj-chaussee" class="px-4 py-1.5 rounded-md text-sm font-medium bg-emerald-600 text-white transition">Chaussée</button>
-                <button onclick="switchNetworkObject('ouvrages')" id="btn-obj-ouvrages" class="px-4 py-1.5 rounded-md text-sm font-medium text-slate-300 hover:bg-slate-700 transition">Ouvrages d'Art</button>
-                <button onclick="switchNetworkObject('signalisation')" id="btn-obj-signalisation" class="px-4 py-1.5 rounded-md text-sm font-medium text-slate-300 hover:bg-slate-700 transition">Signalisation</button>
-                <button onclick="switchNetworkObject('assainissement')" id="btn-obj-assainissement" class="px-4 py-1.5 rounded-md text-sm font-medium text-slate-300 hover:bg-slate-700 transition">Assainissement</button>
-            </nav>
+    <!-- ===== 1. BARRE SUPÉRIEURE : OBJETS DU RÉSEAU & ASSIGNATION GRIST ===== -->
+    <header class="h-14 bg-slate-900 text-white border-b border-slate-800 px-3 sm:px-4 flex items-center justify-between gap-2 shrink-0 z-[1010] shadow-md">
+        <div class="flex items-center gap-3 overflow-x-auto custom-scrollbar py-1">
+            <div class="flex items-center gap-2 pr-2 border-r border-slate-700 shrink-0">
+                <div class="bg-sky-600 p-1.5 rounded-lg"><i data-lucide="layers" class="w-4 h-4 text-white"></i></div>
+                <div class="hidden md:block">
+                    <span class="font-bold text-sm tracking-tight block leading-none">SIG Voirie</span>
+                    <span id="connectionStatusText" class="text-[10px] text-amber-400 font-medium flex items-center gap-1 mt-0.5">
+                        <span class="w-1.5 h-1.5 rounded-full bg-amber-400 inline-block"></span> Connexion…
+                    </span>
+                </div>
+            </div>
+            <nav class="flex items-center gap-1.5" aria-label="Objets du réseau" id="objNav"></nav>
         </div>
-        <div class="flex items-center space-x-3">
-            <span id="grist-status" class="text-xs bg-amber-500/20 text-amber-300 px-3 py-1.5 rounded-full border border-amber-500/30 flex items-center gap-2">
-                <span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span> Connexion Grist...
-            </span>
-            <button onclick="openConfigModal()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-3.5 py-2 rounded-lg text-sm font-medium flex items-center gap-2 shadow transition">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path></svg>
-                Assignation des champs & Sauvegarde
+        <div class="flex items-center gap-2 shrink-0">
+            <button onclick="openMappingModal()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-2.5 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-colors" title="Assigner les tables Grist, les champs, importer des GeoJSON">
+                <i data-lucide="database" class="w-3.5 h-3.5 text-sky-400"></i>
+                <span class="hidden sm:inline">Tables &amp; champs</span>
+                <span id="assignedCountBadge" class="bg-sky-500/20 text-sky-300 border border-sky-500/30 text-[10px] px-1.5 rounded-full font-bold">0/3</span>
             </button>
         </div>
     </header>
 
-    <!-- Corps Principal -->
+    <!-- ===== 2. PANNEAU GAUCHE + CARTE + VOLET DROIT ===== -->
     <div class="flex-1 flex relative overflow-hidden">
 
-        <!-- Panneau Latéral Gauche -->
-        <aside class="w-80 bg-white border-r border-slate-200 flex flex-col z-20 shadow-lg">
-            <div class="p-4 border-b border-slate-100 bg-slate-50">
-                <h2 id="current-object-title" class="font-bold text-slate-800 text-base">Objet : Chaussée</h2>
-                <p class="text-xs text-slate-500 mt-0.5">Navigation par volets métiers</p>
-            </div>
+        <button id="openLeftSidebarBtn" onclick="toggleLeftSidebar(true)" class="hidden absolute top-3 left-3 z-[1000] bg-white hover:bg-slate-50 text-slate-700 px-3 py-2 rounded-xl shadow-lg border border-slate-200 text-xs font-semibold flex items-center gap-2">
+            <i data-lucide="panel-left-open" class="w-4 h-4 text-sky-600"></i><span>Vues &amp; Paramètres</span>
+        </button>
 
-            <!-- Onglets -->
-            <div class="grid grid-cols-2 gap-1 p-2 bg-slate-100 border-b border-slate-200 text-xs font-medium">
-                <button onclick="switchView('patrimoine')" id="tab-patrimoine" class="py-2 px-2 bg-white rounded shadow-sm text-emerald-700 font-semibold transition">1. Patrimoine</button>
-                <button onclick="switchView('usage')" id="tab-usage" class="py-2 px-2 text-slate-600 hover:bg-white/50 rounded transition">2. Usage</button>
-                <button onclick="switchView('pathologies')" id="tab-pathologies" class="py-2 px-2 text-slate-600 hover:bg-white/50 rounded transition">3. Pathologies</button>
-                <button onclick="switchView('programmation')" id="tab-programmation" class="py-2 px-2 text-slate-600 hover:bg-white/50 rounded transition">4. Programmation</button>
-            </div>
-
-            <!-- Contrôles dynamiques -->
-            <div class="flex-1 overflow-y-auto p-4 space-y-4" id="view-controls-container"></div>
-        </aside>
-
-        <!-- Carte -->
-        <main class="flex-1 relative">
-            <div id="map"></div>
-        </main>
-
-        <!-- Volet Latéral Droit (Fiche d'identification) -->
-        <div id="right-drawer" class="w-96 bg-white border-l border-slate-200 shadow-2xl absolute right-0 top-0 bottom-0 z-30 transform translate-x-full sidebar-transition flex flex-col">
-            <div class="p-4 bg-slate-800 text-white flex items-center justify-between">
-                <h3 class="font-semibold text-sm flex items-center gap-2">
-                    <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                    Fiche détaillée de l'entité
-                </h3>
-                <button onclick="closeDrawer()" class="text-slate-400 hover:text-white text-lg">&times;</button>
-            </div>
-            <div class="flex-1 overflow-y-auto p-4 space-y-3 text-sm" id="drawer-content">
-                <p class="text-slate-400 text-center py-12">Sélectionnez un tronçon sur la carte pour afficher ses données patrimoniales et d'état.</p>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal Avancé d'Assignation des Champs -->
-    <div id="config-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
-        <div class="bg-white rounded-xl shadow-2xl max-w-4xl w-full overflow-hidden flex flex-col max-h-[90vh]">
-            <div class="p-5 bg-slate-900 text-white flex justify-between items-center">
-                <div class="flex items-center gap-3">
-                    <h3 class="font-bold text-lg">Assignation exhaustive des champs Grist</h3>
-                    <span class="text-xs bg-emerald-500/20 text-emerald-300 px-2.5 py-0.5 rounded-full border border-emerald-500/30">Sauvegardé automatiquement</span>
+        <aside id="leftSidebar" class="w-full sm:w-[370px] bg-white h-full z-[1005] border-r border-slate-200 shadow-xl flex flex-col shrink-0 absolute sm:relative transition-all">
+            <div class="bg-slate-50 border-b border-slate-200 p-3 pb-0">
+                <div class="flex items-center justify-between mb-2.5">
+                    <div class="flex items-center gap-2">
+                        <span id="activeObjectBadge" class="text-[11px] font-bold uppercase tracking-wider text-sky-700 bg-sky-100 px-2 py-0.5 rounded">Objet : Chaussée</span>
+                        <span id="networkFeatureCount" class="text-[11px] text-slate-500 font-medium">0 segment</span>
+                    </div>
+                    <button onclick="toggleLeftSidebar(false)" class="p-1 text-slate-400 hover:text-slate-700 rounded-lg hover:bg-slate-200/60" title="Replier le panneau">
+                        <i data-lucide="panel-left-close" class="w-4 h-4"></i>
+                    </button>
                 </div>
-                <button onclick="closeConfigModal()" class="text-slate-400 hover:text-white text-2xl">&times;</button>
+                <div class="grid grid-cols-4 gap-1" id="viewTabs"></div>
             </div>
-            <div class="p-6 overflow-y-auto space-y-6 text-sm text-slate-700">
-                <p class="text-xs bg-emerald-50 text-emerald-800 p-3 rounded-lg border border-emerald-200">
-                    Sélectionnez votre table Grist principale, puis associez chaque attribut métier à la colonne correspondante de votre base. Vos choix sont mémorisés localement sur votre poste.
-                </p>
 
-                <!-- Sélection de la Table -->
-                <div class="bg-slate-50 p-4 rounded-lg border border-slate-200">
-                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-2">Table Grist active :</label>
-                    <select id="select-table" onchange="onTableChange()" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm bg-white font-medium"></select>
+            <div id="chausseeViewsContainer" class="flex-1 overflow-y-auto p-3.5 space-y-4 custom-scrollbar">
+                <div id="missingDataBanner" class="hidden bg-amber-50 border border-amber-200 rounded-xl p-3 flex items-start gap-2.5 text-amber-900">
+                    <i data-lucide="alert-circle" class="w-4 h-4 text-amber-600 shrink-0 mt-0.5"></i>
+                    <div class="text-xs leading-relaxed">
+                        <span class="font-semibold block" id="missingDataTitle">Donnée non renseignée</span>
+                        <span id="missingDataDesc" class="text-amber-800"></span>
+                    </div>
                 </div>
 
-                <!-- Grille d'assignation des champs -->
-                <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-600 mb-1">Champ Géométrie (WKT/GeoJSON)</label>
-                        <select id="field-geom" class="field-select w-full border border-slate-300 rounded p-2 text-xs bg-white"></select>
+                <!-- Vue 1 : données patrimoniales (cartes générées en JS) -->
+                <div id="panel-patrimoine" class="view-panel space-y-2.5">
+                    <div class="flex items-center justify-between">
+                        <h2 class="text-xs font-bold uppercase tracking-wider text-slate-500">Données patrimoniales</h2>
+                        <span class="text-[10px] text-slate-400">Représentation cartographique</span>
                     </div>
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-600 mb-1">ID du tronçon</label>
-                        <select id="field-id_troncon" class="field-select w-full border border-slate-300 rounded p-2 text-xs bg-white"></select>
+                    <div class="space-y-2" id="modes-patrimoine"></div>
+                </div>
+
+                <!-- Vue 2 : usage et sollicitations -->
+                <div id="panel-usage" class="view-panel hidden space-y-2.5">
+                    <div class="flex items-center justify-between">
+                        <h2 class="text-xs font-bold uppercase tracking-wider text-slate-500">Usage &amp; sollicitations</h2>
+                        <span class="text-[10px] text-slate-400">Contraintes &amp; aléas</span>
                     </div>
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-600 mb-1">Commune</label>
-                        <select id="field-commune" class="field-select w-full border border-slate-300 rounded p-2 text-xs bg-white"></select>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-600 mb-1">Longueur</label>
-                        <select id="field-longueur" class="field-select w-full border border-slate-300 rounded p-2 text-xs bg-white"></select>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-600 mb-1">Classification domaniale</label>
-                        <select id="field-domanialite" class="field-select w-full border border-slate-300 rounded p-2 text-xs bg-white"></select>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-600 mb-1">Structure de chaussée</label>
-                        <select id="field-structure" class="field-select w-full border border-slate-300 rounded p-2 text-xs bg-white"></select>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-600 mb-1">Âge</label>
-                        <select id="field-age" class="field-select w-full border border-slate-300 rounded p-2 text-xs bg-white"></select>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-600 mb-1">Niveaux de trafic</label>
-                        <select id="field-trafic" class="field-select w-full border border-slate-300 rounded p-2 text-xs bg-white"></select>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-600 mb-1">Fonction de la voie</label>
-                        <select id="field-fonction" class="field-select w-full border border-slate-300 rounded p-2 text-xs bg-white"></select>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-600 mb-1">Catégorie de la voie</label>
-                        <select id="field-categorie" class="field-select w-full border border-slate-300 rounded p-2 text-xs bg-white"></select>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-600 mb-1">Gravité défauts surface</label>
-                        <select id="field-grav_surf" class="field-select w-full border border-slate-300 rounded p-2 text-xs bg-white"></select>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-600 mb-1">Étendue défauts surface</label>
-                        <select id="field-etend_surf" class="field-select w-full border border-slate-300 rounded p-2 text-xs bg-white"></select>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-600 mb-1">Gravité fissure</label>
-                        <select id="field-grav_fissure" class="field-select w-full border border-slate-300 rounded p-2 text-xs bg-white"></select>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-600 mb-1">Étendue fissure</label>
-                        <select id="field-etend_fissure" class="field-select w-full border border-slate-300 rounded p-2 text-xs bg-white"></select>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-600 mb-1">Gravité nid de poule</label>
-                        <select id="field-grav_nid" class="field-select w-full border border-slate-300 rounded p-2 text-xs bg-white"></select>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-600 mb-1">Étendue nid de poule</label>
-                        <select id="field-etend_nid" class="field-select w-full border border-slate-300 rounded p-2 text-xs bg-white"></select>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-600 mb-1">Indicateur état surface</label>
-                        <select id="field-etat_surf" class="field-select w-full border border-slate-300 rounded p-2 text-xs bg-white"></select>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-600 mb-1">Indicateur état structure</label>
-                        <select id="field-etat_struct" class="field-select w-full border border-slate-300 rounded p-2 text-xs bg-white"></select>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-600 mb-1">Note de priorité</label>
-                        <select id="field-prio" class="field-select w-full border border-slate-300 rounded p-2 text-xs bg-white"></select>
+                    <div class="space-y-2" id="modes-usage"></div>
+                    <div id="aleaSelectorBox" class="hidden bg-slate-50 p-2.5 rounded-xl border border-slate-200">
+                        <label class="block text-[11px] font-semibold text-slate-600 mb-1">Filtrer le type d'aléa naturel :</label>
+                        <select id="aleaTypeSelect" onchange="rerenderMap()" class="w-full bg-white border border-slate-300 text-slate-800 text-xs rounded-lg p-2 font-medium focus:ring-2 focus:ring-sky-500 outline-none">
+                            <option value="ALL">Tous les aléas naturels</option>
+                            <option value="RGA">RGA (Retrait-Gonflement des Argiles)</option>
+                            <option value="INONDATION">Inondation / Crue</option>
+                            <option value="GLISSEMENT">Mouvement de terrain / Glissement</option>
+                            <option value="CAVITE">Cavités souterraines</option>
+                        </select>
                     </div>
                 </div>
-            </div>
-            <div class="p-4 bg-slate-50 border-t border-slate-200 flex justify-end gap-3">
-                <button onclick="closeConfigModal()" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg text-sm font-medium">Annuler</button>
-                <button onclick="saveConfigAndReload()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-medium shadow">Enregistrer et Appliquer</button>
-            </div>
-        </div>
-    </div>
 
-    <!-- Leaflet JS -->
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script>
-        let currentObject = 'chaussee';
-        let currentView = 'patrimoine';
-        let map, geoJsonLayer;
-        let gristData = [];
-        let availableTables = [];
-        let tableColumns = [];
-
-        // Configuration par défaut sauvegardée ou initiale
-        let mappingConfig = JSON.parse(localStorage.getItem('sig_voirie_mapping')) || {
-            table: '',
-            geom: 'geometry',
-            id_troncon: 'id',
-            commune: 'commune',
-            longueur: 'longueur',
-            domanialite: 'domanialite',
-            structure: 'structure',
-            age: 'age',
-            trafic: 'trafic',
-            fonction: 'fonction',
-            categorie: 'categorie',
-            grav_surf: 'grav_surf',
-            etend_surf: 'etend_surf',
-            grav_fissure: 'grav_fissure',
-            etend_fissure: 'etend_fissure',
-            grav_nid: 'grav_nid',
-            etend_nid: 'etend_nid',
-            etat_surf: 'etat_surf',
-            etat_struct: 'etat_struct',
-            prio: 'Note_Prio'
-        };
-
-        function initMap() {
-            map = L.map('map').setView([46.075, 4.375], 13);
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                maxZoom: 19,
-                attribution: '© OpenStreetMap'
-            }).addTo(map);
-        }
-
-        function parseWKT(wktString) {
-            if (!wktString || typeof wktString !== 'string') return null;
-            wktString = wktString.trim();
-            try {
-                if (wktString.startsWith('MULTILINESTRING')) {
-                    const coordsSets = wktString.match(/\(([^()]+)\)/g);
-                    let multiCoords = [];
-                    if (coordsSets) {
-                        coordsSets.forEach(set => {
-                            const cleanSet = set.replace(/[()]/g, '');
-                            const points = cleanSet.split(',').map(pt => {
-                                const parts = pt.trim().split(/\s+/);
-                                return [parseFloat(parts[1]), parseFloat(parts[0])];
-                            });
-                            multiCoords.push(points);
-                        });
-                    }
-                    return { type: "MultiLineString", coordinates: multiCoords };
-                } else if (wktString.startsWith('LINESTRING')) {
-                    const match = wktString.match(/\((.*?)\)/);
-                    if (!match) return null;
-                    const points = match[1].split(',').map(pt => {
-                        const parts = pt.trim().split(/\s+/);
-                        return [parseFloat(parts[1]), parseFloat(parts[0])];
-                    });
-                    return { type: "LineString", coordinates: points };
-                }
-            } catch (e) {
-                console.error("Erreur WKT:", e);
-            }
-            return null;
-        }
-
-        function initGrist() {
-            if (typeof grist !== 'undefined' && grist.ready) {
-                grist.ready({ requiredAccess: 'full' });
-                
-                grist.onRecords(function(records) {
-                    gristData = records;
-                    updateStatus("Connecté à Grist (" + records.length + " entités)", "success");
-                    if (records.length > 0 && !tableColumns.length) {
-                        tableColumns = Object.keys(records[0]);
-                        updateFieldDropdowns();
-                    }
-                    renderDataOnMap();
-                });
-
-                if (grist.docApi && grist.docApi.listTables) {
-                    grist.docApi.listTables().then(tables => {
-                        availableTables = tables;
-                        populateTableSelect(tables);
-                    }).catch(err => console.log("Erreur tables Grist:", err));
-                }
-            } else {
-                updateStatus("Mode démonstration (Hors Grist)", "warning");
-                loadDemoData();
-            }
-        }
-
-        function updateStatus(text, type) {
-            const el = document.getElementById('grist-status');
-            el.innerHTML = `<span class="w-2 h-2 rounded-full ${type === 'success' ? 'bg-emerald-400' : 'bg-amber-400'}"></span> ${text}`;
-        }
-
-        function populateTableSelect(tables) {
-            const select = document.getElementById('select-table');
-            select.innerHTML = '';
-            tables.forEach(t => {
-                const opt = document.createElement('option');
-                opt.value = t;
-                opt.textContent = t;
-                if (t === mappingConfig.table) opt.selected = true;
-                select.appendChild(opt);
-            });
-            if (!mappingConfig.table && tables.length > 0) {
-                mappingConfig.table = tables[0];
-            }
-        }
-
-        function onTableChange() {
-            const select = document.getElementById('select-table');
-            mappingConfig.table = select.value;
-        }
-
-        function updateFieldDropdowns() {
-            const selects = document.querySelectorAll('.field-select');
-            selects.forEach(select => {
-                const currentVal = select.value;
-                select.innerHTML = '<option value="">-- Aucun / Non assigné --</option>';
-                tableColumns.forEach(col => {
-                    const opt = document.createElement('option');
-                    opt.value = col;
-                    opt.textContent = col;
-                    select.appendChild(opt);
-                });
-            });
-
-            // Pré-sélectionner avec la config enregistrée
-            for (const [key, colName] of Object.entries(mappingConfig)) {
-                const el = document.getElementById(`field-${key}`);
-                if (el) el.value = colName;
-            }
-        }
-
-        function renderDataOnMap() {
-            if (geoJsonLayer) map.removeLayer(geoJsonLayer);
-
-            const features = [];
-            gristData.forEach(row => {
-                const geomRaw = row[mappingConfig.geom];
-                let coordsData = null;
-
-                if (typeof geomRaw === 'string') {
-                    coordsData = parseWKT(geomRaw);
-                } else if (typeof geomRaw === 'object' && geomRaw !== null) {
-                    coordsData = geomRaw;
-                }
-
-                if (coordsData) {
-                    features.push({
-                        type: "Feature",
-                        geometry: coordsData,
-                        properties: row
-                    });
-                }
-            });
-
-            if (features.length === 0) return;
-
-            geoJsonLayer = L.geoJSON({ type: "FeatureCollection", features: features }, {
-                style: function(feature) {
-                    let color = '#3b82f6';
-                    const props = feature.properties;
-
-                    if (currentView === 'patrimoine') {
-                        const dom = props[mappingConfig.domanialite];
-                        if (dom === 'Rue') color = '#10b981';
-                        else if (dom === 'Chemin') color = '#f59e0b';
-                        else if (dom === 'Place') color = '#8b5cf6';
-                    } else if (currentView === 'programmation') {
-                        const prio = props[mappingConfig.prio];
-                        if (prio > 7) color = '#ef4444';
-                        else if (prio > 4) color = '#f97316';
-                        else color = '#22c55e';
-                    } else if (currentView === 'pathologies') {
-                        const fiss = props[mappingConfig.grav_fissure];
-                        if (fiss > 3) color = '#dc2626';
-                        else color = '#64748b';
-                    }
-
-                    return { color: color, weight: 4, opacity: 0.85 };
-                },
-                onEachFeature: function(feature, layer) {
-                    layer.on('click', function() {
-                        openDrawerWithData(feature.properties);
-                        if (window.grist && grist.setSelectedRows) {
-                            grist.setSelectedRows([feature.properties[mappingConfig.id_troncon] || feature.properties.id]);
-                        }
-                    });
-                }
-            }).addTo(map);
-
-            try {
-                map.fitBounds(geoJsonLayer.getBounds());
-            } catch(e) {}
-        }
-
-        function switchNetworkObject(obj) {
-            currentObject = obj;
-            ['chaussee', 'ouvrages', 'signalisation', 'assainissement'].forEach(o => {
-                const btn = document.getElementById(`btn-obj-${o}`);
-                if (o === obj) {
-                    btn.className = "px-4 py-1.5 rounded-md text-sm font-medium bg-emerald-600 text-white transition";
-                } else {
-                    btn.className = "px-4 py-1.5 rounded-md text-sm font-medium text-slate-300 hover:bg-slate-700 transition";
-                }
-            });
-            document.getElementById('current-object-title').textContent = "Objet : " + capitalize(obj);
-            updateViewControls();
-        }
-
-        function switchView(view) {
-            currentView = view;
-            ['patrimoine', 'usage', 'pathologies', 'programmation'].forEach(v => {
-                const tab = document.getElementById(`tab-${v}`);
-                if (v === view) {
-                    tab.className = "py-2 px-2 bg-white rounded shadow-sm text-emerald-700 font-semibold transition";
-                } else {
-                    tab.className = "py-2 px-2 text-slate-600 hover:bg-white/50 rounded transition";
-                }
-            });
-            updateViewControls();
-            renderDataOnMap();
-        }
-
-        function updateViewControls() {
-            const container = document.getElementById('view-controls-container');
-            if (currentView === 'patrimoine') {
-                container.innerHTML = `
-                    <div class="space-y-3">
-                        <label class="block text-xs font-semibold text-slate-700">Visualisation Patrimoniale :</label>
-                        <select onchange="renderDataOnMap()" class="w-full border border-slate-300 rounded p-2 text-xs bg-white">
-                            <option>Filaire du réseau (Symbologie simple)</option>
-                            <option>Classification domaniale</option>
-                            <option>Structure de chaussée</option>
-                            <option>Âge de la structure</option>
-                        </select>
-                        <p class="text-xs text-slate-500">Données structurelles et historiques du réseau.</p>
+                <!-- Vue 3 : pathologies et état -->
+                <div id="panel-pathologies" class="view-panel hidden space-y-4">
+                    <div class="flex items-center justify-between">
+                        <h2 class="text-xs font-bold uppercase tracking-wider text-slate-500">Pathologies &amp; état</h2>
+                        <span class="text-[10px] text-slate-400">Auscultation &amp; relevés</span>
                     </div>
-                `;
-            } else if (currentView === 'usage') {
-                container.innerHTML = `
                     <div class="space-y-3">
-                        <label class="block text-xs font-semibold text-slate-700">Usage & Sollicitations :</label>
-                        <select class="w-full border border-slate-300 rounded p-2 text-xs bg-white">
-                            <option>Niveaux de trafic</option>
-                            <option>Fonction de la voie</option>
-                            <option>Catégorie de la voie</option>
-                        </select>
-                        <label class="block text-xs font-semibold text-slate-700 mt-4">Aléas naturels :</label>
-                        <select class="w-full border border-slate-300 rounded p-2 text-xs bg-white">
-                            <option value="">Sélectionner un aléa...</option>
-                            <option>Retrait-Gonflement Argiles (RGA)</option>
-                            <option>Inondation / Ruissellement</option>
-                        </select>
-                    </div>
-                `;
-            } else if (currentView === 'pathologies') {
-                container.innerHTML = `
-                    <div class="space-y-3">
-                        <label class="block text-xs font-semibold text-slate-700">Pathologie spécifique :</label>
-                        <select class="w-full border border-slate-300 rounded p-2 text-xs bg-white">
-                            <option>Fissures (Gravité / Étendue)</option>
-                            <option>Nids-de-poule</option>
-                            <option>Déformations de chaussée / rive</option>
-                            <option>Défauts de surface</option>
-                        </select>
-                        <label class="block text-xs font-semibold text-slate-700 mt-4">Indicateur d'état global :</label>
-                        <select class="w-full border border-slate-300 rounded p-2 text-xs bg-white">
-                            <option>Indicateur d'état de surface</option>
-                            <option>Indicateur d'état de structure</option>
-                        </select>
-                    </div>
-                `;
-            } else if (currentView === 'programmation') {
-                container.innerHTML = `
-                    <div class="space-y-3">
-                        <label class="block text-xs font-semibold text-slate-700">Programmation & Priorités :</label>
-                        <select onchange="renderDataOnMap()" class="w-full border border-slate-300 rounded p-2 text-xs bg-white">
-                            <option>Note de priorité</option>
-                            <option>Gravité réparation</option>
-                        </select>
-                        <div class="bg-emerald-50 p-3 rounded-lg border border-emerald-100 text-xs text-emerald-900 mt-4">
-                            <p class="font-semibold">Synthèse de programmation :</p>
-                            <p class="mt-1">Linéaire prioritaire : <strong>Actif</strong></p>
+                        <div class="radio-card rounded-xl border border-slate-200 p-3 space-y-2.5 transition-all">
+                            <label class="flex items-start gap-2.5 cursor-pointer">
+                                <input type="radio" name="pathoMode" value="pathologie_individuelle" checked onchange="setPathoMode(this.value)" class="hidden">
+                                <span class="radio-dot w-4 h-4 rounded-full border-2 border-slate-300 flex items-center justify-center shrink-0 mt-0.5"></span>
+                                <div class="flex-1">
+                                    <span class="text-xs font-bold text-slate-800 block">Pathologie (gravité × étendue)</span>
+                                    <span class="text-[11px] text-slate-500 block">Légers / graves, localisés / généralisés</span>
+                                </div>
+                            </label>
+                            <div class="pl-6">
+                                <select id="pathoTypeSelect" onchange="selectRadioAndRender('pathoMode','pathologie_individuelle')" class="w-full bg-white border border-slate-300 text-slate-800 text-xs rounded-lg p-2 font-medium focus:ring-2 focus:ring-sky-500 outline-none shadow-sm"></select>
+                            </div>
+                        </div>
+                        <div class="radio-card rounded-xl border border-slate-200 p-3 space-y-2.5 transition-all">
+                            <label class="flex items-start gap-2.5 cursor-pointer">
+                                <input type="radio" name="pathoMode" value="etat_global" onchange="setPathoMode(this.value)" class="hidden">
+                                <span class="radio-dot w-4 h-4 rounded-full border-2 border-slate-300 flex items-center justify-center shrink-0 mt-0.5"></span>
+                                <div class="flex-1">
+                                    <span class="text-xs font-bold text-slate-800 block">Indicateur d'état</span>
+                                    <span class="text-[11px] text-slate-500 block">Note synthétique de 0 à 3</span>
+                                </div>
+                            </label>
+                            <div class="pl-6">
+                                <select id="etatTypeSelect" onchange="selectRadioAndRender('pathoMode','etat_global')" class="w-full bg-white border border-slate-300 text-slate-800 text-xs rounded-lg p-2 font-medium focus:ring-2 focus:ring-sky-500 outline-none shadow-sm">
+                                    <option value="etat_surf">État de surface</option>
+                                    <option value="etat_struct">État de structure</option>
+                                </select>
+                            </div>
                         </div>
                     </div>
-                `;
+                </div>
+
+                <!-- Vue 4 : programmation -->
+                <div id="panel-programmation" class="view-panel hidden space-y-3.5">
+                    <div class="flex items-center justify-between">
+                        <h2 class="text-xs font-bold uppercase tracking-wider text-slate-500">Programmation travaux</h2>
+                        <span class="text-[10px] text-slate-400">Hiérarchisation</span>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <label class="radio-card p-2 rounded-xl border border-slate-200 cursor-pointer text-center">
+                            <input type="radio" name="progMode" value="prio" checked onchange="setProgMode(this.value)" class="hidden">
+                            <span class="text-xs font-semibold text-slate-800 block">Note de priorité</span>
+                            <span class="text-[10px] text-slate-500">Indicateur de programmation</span>
+                        </label>
+                        <label class="radio-card p-2 rounded-xl border border-slate-200 cursor-pointer text-center">
+                            <input type="radio" name="progMode" value="solution" onchange="setProgMode(this.value)" class="hidden">
+                            <span class="text-xs font-semibold text-slate-800 block">Solution de travaux</span>
+                            <span class="text-[10px] text-slate-500">Technique retenue</span>
+                        </label>
+                    </div>
+                    <div class="bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-2">
+                        <label class="block text-[11px] font-bold text-slate-700">Filtrer par niveau de priorité :</label>
+                        <div class="grid grid-cols-2 gap-1.5" id="prioButtons"></div>
+                    </div>
+                    <div class="bg-sky-900 text-white p-3 rounded-xl flex items-center justify-between">
+                        <div>
+                            <span class="text-[10px] uppercase tracking-wider text-sky-300 font-semibold block">Sélection filtrée</span>
+                            <span id="progFilteredCount" class="text-sm font-bold">0 segment</span>
+                        </div>
+                        <div class="text-right">
+                            <span class="text-[10px] uppercase tracking-wider text-sky-300 font-semibold block">Linéaire cumulé</span>
+                            <span id="progFilteredLength" class="text-sm font-bold text-sky-300">0 m</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Filtres communs à toutes les vues -->
+                <div class="pt-3 border-t border-slate-200 space-y-2">
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-700 mb-1">Commune :</label>
+                        <select id="communeFilter" onchange="rerenderMap(true)" class="w-full bg-white border border-slate-300 text-slate-800 text-xs rounded-lg p-2 font-medium outline-none">
+                            <option value="ALL">Toutes</option>
+                        </select>
+                    </div>
+                    <div class="relative">
+                        <i data-lucide="search" class="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5"></i>
+                        <input type="text" id="globalSearchInput" oninput="rerenderMap()" placeholder="Rechercher un numéro de voie, nom, commune..."
+                            class="w-full pl-8 pr-7 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:bg-white focus:ring-2 focus:ring-sky-500 outline-none">
+                        <button onclick="document.getElementById('globalSearchInput').value=''; rerenderMap();" class="absolute right-2.5 top-2 text-slate-400 hover:text-slate-600 text-xs" title="Effacer">✕</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="otherObjectPlaceholder" class="hidden flex-1 p-6 flex flex-col items-center justify-center text-center space-y-3 bg-slate-50/50">
+                <div class="w-12 h-12 rounded-2xl bg-sky-100 text-sky-600 flex items-center justify-center"><i data-lucide="construction" class="w-6 h-6"></i></div>
+                <h3 id="placeholderObjTitle" class="font-bold text-sm text-slate-800">Module</h3>
+                <p class="text-xs text-slate-500 leading-relaxed max-w-xs">Les 4 vues métiers sont prêtes à être raccordées à la table Grist dédiée à cet objet.</p>
+                <button onclick="switchNetworkObject('chaussee')" class="text-xs font-semibold text-sky-600 hover:text-sky-800 underline pt-2">Revenir à l'objet Chaussée</button>
+            </div>
+
+            <div class="p-2.5 bg-slate-50 border-t border-slate-200 flex items-center justify-between gap-2">
+                <button onclick="zoomToNetwork()" class="flex-1 bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 font-medium py-1.5 px-3 rounded-lg text-xs flex items-center justify-center gap-1.5 shadow-sm transition-colors">
+                    <i data-lucide="maximize-2" class="w-3.5 h-3.5 text-sky-600"></i> Recentrer sur le réseau
+                </button>
+            </div>
+        </aside>
+
+        <main class="flex-1 relative h-full">
+            <div id="map"></div>
+            <div id="mapLegend" class="absolute bottom-5 left-4 z-[1000] bg-white/95 backdrop-blur-md p-3 rounded-xl shadow-lg border border-slate-200 min-w-[200px] max-w-[270px] text-xs">
+                <div class="font-bold text-slate-800 pb-1.5 mb-2 border-b border-slate-100 flex items-center justify-between gap-2">
+                    <span id="legendTitle">Légende</span>
+                    <span class="text-[10px] font-normal text-slate-400">Chaussée</span>
+                </div>
+                <div id="legendBody" class="space-y-1.5 max-h-48 overflow-y-auto custom-scrollbar"></div>
+            </div>
+            <div id="toastNotification" class="hidden absolute top-4 left-1/2 -translate-x-1/2 z-[1020] bg-slate-900 text-white px-4 py-2 rounded-full shadow-xl text-xs font-medium flex items-center gap-2">
+                <i data-lucide="info" class="w-4 h-4 text-sky-400"></i><span id="toastMessage"></span>
+            </div>
+        </main>
+
+        <!-- Fiche d'identification (tiroir droit) -->
+        <aside id="inspectorDrawer" class="hidden w-full sm:w-[360px] bg-white h-full z-[1006] border-l border-slate-200 shadow-2xl flex flex-col shrink-0 absolute right-0 top-0 transition-all">
+            <div class="bg-slate-900 text-white p-3.5 flex items-start justify-between gap-2">
+                <div class="min-w-0">
+                    <div class="flex items-center gap-1.5">
+                        <span id="inspBadgeNum" class="bg-sky-600 text-white text-[10px] font-bold px-2 py-0.5 rounded uppercase">--</span>
+                        <span id="inspCommune" class="text-[11px] text-slate-300 truncate"></span>
+                    </div>
+                    <h2 id="inspTitle" class="font-bold text-sm mt-1 truncate"></h2>
+                    <div class="flex items-center gap-3 mt-1 text-[11px] text-slate-400">
+                        <span id="inspLength" class="flex items-center gap-1"></span>
+                        <span id="inspId" class="flex items-center gap-1"></span>
+                    </div>
+                </div>
+                <button onclick="closeInspector()" class="p-1.5 bg-slate-800 hover:bg-slate-700 rounded-lg text-slate-300 hover:text-white transition-colors" title="Fermer la fiche">
+                    <i data-lucide="x" class="w-4 h-4"></i>
+                </button>
+            </div>
+            <div class="grid grid-cols-5 bg-slate-100 border-b border-slate-200 p-1 gap-1" id="inspTabs"></div>
+            <div id="inspectorContent" class="flex-1 overflow-y-auto p-3.5 space-y-2 custom-scrollbar text-xs"></div>
+            <div class="p-2.5 bg-slate-50 border-t border-slate-200 flex items-center justify-between text-[11px] text-slate-500">
+                <span>Fiche segment</span>
+                <button onclick="zoomToSelectedSegment()" class="text-sky-600 hover:text-sky-800 font-semibold flex items-center gap-1">
+                    <i data-lucide="crosshair" class="w-3.5 h-3.5"></i> Zoomer sur le segment
+                </button>
+            </div>
+        </aside>
+    </div>
+
+    <!-- ===== 3. MODALE : TABLES, CHAMPS, SEUILS ===== -->
+    <div id="mappingModal" class="hidden fixed inset-0 z-[2000] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-3xl overflow-hidden flex flex-col max-h-[92vh]">
+            <div class="p-4 bg-slate-900 text-white flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                    <i data-lucide="database" class="w-5 h-5 text-sky-400"></i>
+                    <div>
+                        <h3 class="font-bold text-sm">Tables Grist, champs et seuils</h3>
+                        <p class="text-[11px] text-slate-400">Les choix sont enregistrés dans le document Grist (partagés entre utilisateurs)</p>
+                    </div>
+                </div>
+                <button onclick="closeMappingModal()" class="p-1.5 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-white"><i data-lucide="x" class="w-4 h-4"></i></button>
+            </div>
+            <div id="mappingBody" class="p-4 overflow-y-auto space-y-5 custom-scrollbar text-xs"></div>
+            <div class="p-3 bg-slate-50 border-t border-slate-200 flex justify-between items-center">
+                <button onclick="resetToDemoData()" class="text-xs text-slate-500 hover:text-slate-800 underline">Charger les données de démo</button>
+                <div class="flex gap-2">
+                    <button onclick="closeMappingModal()" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg text-xs font-medium">Annuler</button>
+                    <button onclick="saveMapping()" class="bg-sky-600 hover:bg-sky-700 text-white font-semibold px-4 py-2 rounded-lg text-xs shadow-sm">Enregistrer et appliquer</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+<script>
+/* =========================================================================
+   1. CONFIGURATION MÉTIER (à adapter : libellés, couleurs, champs attendus)
+   ========================================================================= */
+const $ = id => document.getElementById(id);
+const GREY = '#94a3b8';
+const PALETTE = ['#2563eb', '#059669', '#d97706', '#7c3aed', '#db2777', '#0891b2', '#4f46e5'];
+
+// Pathologies du fichier : colonnes g_<clé> (gravité 0-2) et e_<clé> (étendue 0-2)
+const PATHOS = [
+    { k: 'def_surf', label: 'Défauts de surface' },
+    { k: 'fiss',     label: 'Fissuration' },
+    { k: 'rep',      label: 'Réparations' },
+    { k: 'ndp',      label: 'Nids-de-poule' },
+    { k: 'def_c',    label: 'Déformations (def_c)' },
+    { k: 'def_r',    label: 'Déformations (def_r)' },
+    { k: 'tranchee', label: 'Tranchées' },
+    { k: 'sv',       label: 'Défauts SV (sv)' }
+];
+const GRAVE = {
+    'Absence de défauts':            { color: '#1fc24a', weight: 4 },
+    'Défauts légers et localisés':   { color: '#f4a340', weight: 5, dashArray: '8, 6' },
+    'Défauts légers et généralisés': { color: '#f4a340', weight: 5 },
+    'Défauts graves et localisés':   { color: '#c0121f', weight: 5.5, dashArray: '8, 6' },
+    'Défauts graves et généralisés': { color: '#c0121f', weight: 6 }
+};
+const INDIC = [
+    { v: 0, label: '0 · Bon état',       color: '#1fc24a' },
+    { v: 1, label: '1 · État moyen',     color: '#eab308' },
+    { v: 2, label: '2 · Dégradé',        color: '#f97316' },
+    { v: 3, label: '3 · Très dégradé',   color: '#c0121f' }
+];
+const DOMAN_COLORS = { 'VC RUES': '#f9a77a', 'VC PLACE': '#6cc24a', 'VC CHEMIN': '#6f6fcf', 'RD': '#e8d92a', 'CR': '#d6246e', 'À qualifier': '#8fd19e' };
+const SOLUTION_COLORS = { 'Aucune': '#1fc24a', 'Entretien courant': '#b9cdf2', 'ESU / MBCF': '#d6a91e', 'BB': '#e5600e', 'Reprise structurelle / reprofilage': '#5c1fbf' };
+const LEVEL_COLORS = { '1': '#0b1b86', '2': '#c8286f', '3': '#52d46a' };
+
+// Champs métier -> noms de colonnes candidats (insensible à la casse) : valeurs par défaut de l'assignation
+const FIELDS = [
+    { k: 'geom',        g: 'Identification', label: 'Géométrie (GeoJSON ou WKT)', c: ['Geometrie', 'geometry', 'geom', 'geojson', 'wkt', 'the_geom', 'shape'] },
+    { k: 'id',          g: 'Identification', label: 'Identifiant du segment',     c: ['Pk', 'pk', 'fid', 'id_segment'] },
+    { k: 'id_tronc',    g: 'Identification', label: 'Identifiant du tronçon',     c: ['Id_tronc', 'id_tronc'] },
+    { k: 'num',         g: 'Identification', label: 'Numéro de voie',             c: ['Num', 'num', 'numero'] },
+    { k: 'nom_voie',    g: 'Identification', label: 'Nom de la voie',             c: ['Nom_voie', 'nom_voie', 'nom'] },
+    { k: 'commune',     g: 'Identification', label: 'Commune',                    c: ['Commune', 'nom_offici', 'commune'] },
+    { k: 'longueur',    g: 'Identification', label: 'Longueur (m)',               c: ['Longueur_m', 'longueur', 'length'] },
+    { k: 'observation', g: 'Identification', label: 'Observation',                c: ['Observation', 'obs'] },
+    { k: 'domanialite', g: 'Patrimoine',     label: 'Classification domaniale',   c: ['Classification', 'domanialite', 'domanial', 'classement'] },
+    { k: 'structure',   g: 'Patrimoine',     label: 'Structure de chaussée',      c: ['Structure_chaussee', 'structure_chaussee', 'structure', 'revetement'] },
+    { k: 'age',         g: 'Patrimoine',     label: 'Âge de la chaussée',         c: ['Age_chaussee', 'age_chaussee', 'age', 'anciennete'] },
+    { k: 'trafic',      g: 'Usage',          label: 'Niveau de trafic',           c: ['Trafic', 'trafic', 'niveau_trafic', 'tmja'] },
+    { k: 'fonction',    g: 'Usage',          label: 'Fonction de la voie',        c: ['Fonction_voie', 'fonction_voie', 'fonction', 'hierarchie'] },
+    { k: 'categorie',   g: 'Usage',          label: 'Catégorie de la voie',       c: ['Categorie', 'categorie', 'categorie_voie'] },
+    { k: 'tonnage',     g: 'Usage',          label: 'Limitation tonnage / gabarit', c: ['Limitation_tonnage', 'limitation_tonnage', 'tonnage', 'gabarit'] },
+    { k: 'securite',    g: 'Usage',          label: 'Enjeu de sécurité',          c: ['Enjeu_securite', 'enjeu_securite'] },
+    ...PATHOS.flatMap(p => [
+        { k: 'g_' + p.k, g: 'Pathologies', label: 'Gravité · ' + p.label,  c: ['G_' + p.k, 'g_' + p.k] },
+        { k: 'e_' + p.k, g: 'Pathologies', label: 'Étendue · ' + p.label,  c: ['E_' + p.k, 'e_' + p.k] }
+    ]),
+    { k: 'etat_surf',   g: 'État & programmation', label: 'Indicateur d\'état de surface',   c: ['Ind_etat_surface', 'ind_etat_sur'] },
+    { k: 'etat_struct', g: 'État & programmation', label: 'Indicateur d\'état de structure', c: ['Ind_etat_structure', 'ind_etat_str'] },
+    { k: 'prio',        g: 'État & programmation', label: 'Note de priorité',                c: ['Note_prio', 'Note_Prio', 'priorite', 'note_priorite'] },
+    { k: 'solution',    g: 'État & programmation', label: 'Solution de travaux',             c: ['Solution', 'Sol_Retenue', 'solution', 'travaux_prevus'] },
+    { k: 'annee_prog',  g: 'État & programmation', label: 'Année programmée',                c: ['Annee_prog', 'annee_prog'] },
+    { k: 'cout',        g: 'État & programmation', label: 'Estimation financière (€)',       c: ['Cout_estime', 'cout_estime'] }
+];
+const POLY_FIELDS = {
+    sols:  [{ k: 'sol_type',   label: 'Type de sol support', c: ['type_sol', 'sol', 'nature', 'libelle'] },
+            { k: 'portance',   label: 'Portance',            c: ['portance'] }],
+    aleas: [{ k: 'alea_type',  label: 'Type d\'aléa',        c: ['type_alea', 'alea', 'risque', 'libelle'] },
+            { k: 'alea_niveau', label: 'Niveau d\'aléa',     c: ['niveau', 'intensite', 'aleas_niv'] }]
+};
+const GEOM_FIELD = FIELDS[0];
+const ROLES = [
+    { k: 'chaussee', label: '1. Chaussée (segments linéaires)',      dot: 'bg-sky-600 rounded-full',   hint: /segment|chauss|filaire|troncon|voie/i },
+    { k: 'sols',     label: '2. Types de sol support (polygones)',   dot: 'bg-orange-500 rounded-sm',  hint: /sol|geol|portance/i },
+    { k: 'aleas',    label: '3. Zonage aléas naturels (polygones)',  dot: 'bg-rose-600 rounded-sm',    hint: /alea|risque|rga|inond/i }
+];
+const OBJECTS = {
+    chaussee: ['Chaussée', 'route'], ouvrages: ['Ouvrages d\'art', 'landmark'],
+    signalisation: ['Signalisation verticale', 'signpost'], assainissement: ['Assainissement', 'droplets']
+};
+const VIEW_TABS = [
+    ['patrimoine', 'Patrimoine', 'landmark', 'Patrimoine'], ['usage', 'Usage & Aléas', 'truck', 'Usage'],
+    ['pathologies', 'Pathologies', 'activity', 'Pathologies'], ['programmation', 'Programmation', 'calendar-check', 'Program.']
+];
+const MODES = {
+    patrimoine: [
+        ['filaire', 'Filaire du réseau', 'Symbologie linéaire simple uniforme', 'minus', 'text-sky-600'],
+        ['domanialite', 'Classification domaniale', 'VC rues / chemins / places, RD, CR…', 'signpost-big', 'text-indigo-500'],
+        ['structure', 'Structure de chaussée', 'Type de structure en place', 'layers', 'text-emerald-600'],
+        ['age', 'Âge de la chaussée', 'Classes d\'âge : 0-5, 6-10, 11-15 ans…', 'clock', 'text-amber-500'],
+        ['sol_support', 'Type de sol support', 'Couche polygone des sols + filaire par-dessus', 'map', 'text-orange-600'],
+        ['segments_noeuds', 'Segments & nœuds d\'extrémité', 'Découpage en segments avec points début/fin', 'git-commit-horizontal', 'text-purple-600']
+    ],
+    usage: [
+        ['trafic', 'Niveaux de trafic', 'Faible, moyen, fort', '', ''],
+        ['fonction', 'Fonction de la voie', 'Hiérarchie fonctionnelle (1, 2, 3)', '', ''],
+        ['categorie', 'Catégorie de la voie', 'Classement technique (1, 2, 3)', '', ''],
+        ['securite_tonnage', 'Sécurité & limitation tonnage/gabarit', 'Restrictions de circulation', '', ''],
+        ['aleas', 'Exposition aux aléas naturels', 'Zonage polygone aléas + filaire voirie', 'triangle-alert', 'text-rose-600']
+    ]
+};
+
+/* =========================================================================
+   2. ÉTAT GLOBAL
+   ========================================================================= */
+let map, roadRenderer;
+let isGristMode = false, READY = false, BOUND_TABLE = null;
+let CACHE = {};                                   // tables disponibles { id: {cols,data,rowIds,geomCol,count,source} }
+let CFG = defaultCfg();                           // configuration persistée
+let DRAFT = null;                                 // copie de travail dans la modale
+let ASSIGNED = { chaussee: [], sols: [], aleas: [] };
+let polygonBgLayerGroup = null, roadLayerGroup = null, nodesLayerGroup = null;
+let LAYERS = new Map();                           // uid -> couche Leaflet des segments
+let EV = null;                                    // évaluateur de style courant
+let currentObject = 'chaussee', currentViewTab = 'patrimoine';
+let currentPatrimoineMode = 'filaire', currentUsageMode = 'trafic', currentPathoMode = 'pathologie_individuelle', currentProgMode = 'prio';
+let currentPriorityFilter = 'ALL';
+let selectedFeature = null, selectedUid = null, currentInspectorTab = 'patrimoine';
+
+function defaultCfg() {
+    return { tables: {}, map: { chaussee: {}, sols: {}, aleas: {} }, prio: { high: 5, med: 3 } };
+}
+function mergeCfg(o) {
+    const d = defaultCfg();
+    if (!o || typeof o !== 'object') return d;
+    return { tables: { ...d.tables, ...(o.tables || {}) },
+             map: { chaussee: { ...(o.map?.chaussee || {}) }, sols: { ...(o.map?.sols || {}) }, aleas: { ...(o.map?.aleas || {}) } },
+             prio: { ...d.prio, ...(o.prio || {}) } };
+}
+function icons() { try { window.lucide && lucide.createIcons(); } catch (e) {} }
+function nz(v) { return (v === undefined || v === null || v === '') ? 'Non renseigné' : String(v); }
+function filled(v) { return v !== undefined && v !== null && v !== ''; }
+function esc(s) { return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
+
+/* =========================================================================
+   3. GÉOMÉTRIES : GeoJSON (texte ou objet) et WKT
+   ========================================================================= */
+function parseWKT(s) {
+    s = s.replace(/^SRID=\d+;/i, '').trim();
+    const m = s.match(/^(MULTILINESTRING|LINESTRING|MULTIPOLYGON|POLYGON)\s*(?:ZM|Z|M)?\s*(\(.*\))\s*$/is);
+    if (!m) return null;
+    const type = m[1].toUpperCase();
+    const strip = t => t.trim().replace(/^\(+/, '').replace(/\)+$/, '');
+    const pt = t => { const a = t.trim().split(/\s+/).map(Number); return [a[0], a[1]]; };   // WKT = "x y" = "lon lat"
+    const line = t => t.split(',').map(pt);
+    const rings = t => t.split(/\)\s*,\s*\(/).map(line);
+    const body = strip(m[2]);
+    let coordinates;
+    if (type === 'LINESTRING') coordinates = line(body);
+    else if (type === 'MULTILINESTRING' || type === 'POLYGON') coordinates = rings(body);
+    else coordinates = body.split(/\)\)\s*,\s*\(\(/).map(rings);
+    const bad = JSON.stringify(coordinates).includes('null');
+    return bad ? null : { type: type === 'LINESTRING' ? 'LineString' : type === 'MULTILINESTRING' ? 'MultiLineString' : type === 'POLYGON' ? 'Polygon' : 'MultiPolygon', coordinates };
+}
+
+function parseGeometry(raw) {
+    if (raw === undefined || raw === null || raw === '') return null;
+    let o = raw;
+    if (typeof raw === 'string') {
+        const s = raw.trim();
+        if (s[0] === '{') { try { o = JSON.parse(s); } catch (e) { return null; } }
+        else return parseWKT(s);
+    }
+    if (typeof o !== 'object') return null;
+    if (o.type === 'Feature') o = o.geometry;
+    if (o && o.type === 'FeatureCollection') o = o.features?.[0]?.geometry;
+    return (o && o.type && o.coordinates) ? o : null;
+}
+
+/* =========================================================================
+   4. TABLES : cache, détection, assignation champ -> colonne, construction
+   ========================================================================= */
+function guessCol(f, cols) {
+    for (const cand of f.c) {
+        const hit = cols.find(x => x.toLowerCase() === cand.toLowerCase());
+        if (hit) return hit;
+    }
+    return '';
+}
+// Colonne retenue pour un champ : choix explicite (même « aucun ») sinon détection automatique
+function resolveCol(role, f, cols, map = CFG.map[role]) {
+    if (map && Object.prototype.hasOwnProperty.call(map, f.k) && (map[f.k] === '' || cols.includes(map[f.k]))) return map[f.k];
+    return guessCol(f, cols);
+}
+
+function registerTable(id, data, source, label) {
+    const cols = Object.keys(data).filter(c => c !== 'id' && c !== 'manualSort');
+    const n = (data.id || data[cols[0]] || []).length;
+    const rowIds = data.id || Array.from({ length: n }, (_, i) => i + 1);
+    let geomCol = guessCol(GEOM_FIELD, cols);
+    if (!geomCol) geomCol = cols.find(c => { const v = data[c] || []; for (let i = 0; i < Math.min(n, 8); i++) if (parseGeometry(v[i])) return true; return false; }) || '';
+    if (!geomCol) return false;
+    let type = '';
+    for (let i = 0; i < Math.min(n, 20) && !type; i++) { const g = parseGeometry(data[geomCol][i]); if (g) type = g.type; }
+    CACHE[id] = { id, label: label || id, cols, data, rowIds, geomCol, geomType: type, count: n, source };
+    return true;
+}
+
+function buildFeatures(tableId, role) {
+    const t = CACHE[tableId];
+    if (!t) return [];
+    const fields = role === 'chaussee' ? FIELDS : POLY_FIELDS[role];
+    const gcol = role === 'chaussee' ? (resolveCol(role, GEOM_FIELD, t.cols) || t.geomCol) : t.geomCol;
+    const col = {};
+    fields.forEach(f => { if (f.k !== 'geom') col[f.k] = resolveCol(role, f, t.cols); });
+    const out = [];
+    for (let i = 0; i < t.count; i++) {
+        const geom = parseGeometry(t.data[gcol]?.[i]);
+        if (!geom) continue;
+        const p = { _row: t.rowIds[i], _uid: role + i, _raw: {} };
+        for (const k in col) if (col[k]) p[k] = t.data[col[k]][i];
+        for (const c of t.cols) if (c !== gcol) p._raw[c] = t.data[c][i];
+        out.push({ type: 'Feature', properties: p, geometry: geom });
+    }
+    return out;
+}
+
+function autoPick(role) {
+    const ids = Object.keys(CACHE);
+    const wantLine = role === 'chaussee';
+    const ok = id => wantLine ? CACHE[id].geomType.includes('LineString') : CACHE[id].geomType.includes('Polygon');
+    const cands = ids.filter(ok);
+    const hint = ROLES.find(r => r.k === role).hint;
+    return cands.find(id => hint.test(id)) || (wantLine ? cands[0] : '') || '';
+}
+
+function applyConfig(zoom) {
+    ROLES.forEach(r => {
+        let id = CFG.tables[r.k];
+        if (id === undefined) id = autoPick(r.k);
+        ASSIGNED[r.k] = (id && CACHE[id]) ? buildFeatures(id, r.k) : [];
+        r._table = id && CACHE[id] ? id : '';
+    });
+    updateCommuneFilter();
+    rerenderMap();
+    if (zoom) zoomToNetwork();
+    $('assignedCountBadge').textContent = `${ROLES.filter(r => ASSIGNED[r.k].length).length}/3`;
+    updatePrioButtons();
+}
+const tableOfRole = role => ROLES.find(r => r.k === role)._table || '';
+
+/* =========================================================================
+   5. PERSISTANCE (document Grist) ET CONNEXION
+   ========================================================================= */
+function saveCfg() {
+    try { localStorage.setItem('sig_voirie_cfg', JSON.stringify(CFG)); } catch (e) {}
+    try { if (isGristMode) grist.setOption('cfg', CFG); } catch (e) {}
+}
+function loadLocalCfg() {
+    try { const s = localStorage.getItem('sig_voirie_cfg'); if (s) CFG = mergeCfg(JSON.parse(s)); } catch (e) {}
+}
+
+function setStatus(text, ok) {
+    const el = $('connectionStatusText');
+    el.className = `text-[10px] ${ok ? 'text-emerald-400' : 'text-amber-400'} font-medium flex items-center gap-1 mt-0.5`;
+    el.innerHTML = `<span class="w-1.5 h-1.5 rounded-full ${ok ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'} inline-block"></span> ${text}`;
+}
+
+async function scanGristTables() {
+    const ids = (await grist.docApi.listTables()).filter(t => !t.startsWith('_grist_'));
+    for (const id of ids) {
+        try { registerTable(id, await grist.docApi.fetchTable(id), 'grist'); } catch (e) { console.warn('Table ignorée', id, e); }
+    }
+}
+async function refreshAssigned() {
+    const ids = [...new Set(ROLES.map(r => r._table).filter(id => id && CACHE[id] && CACHE[id].source === 'grist'))];
+    for (const id of ids) { try { registerTable(id, await grist.docApi.fetchTable(id), 'grist'); } catch (e) {} }
+    applyConfig(false);
+}
+
+let refreshTimer = null, optionsApplied = false;
+function initGristConnection() {
+    if (window.parent !== window && typeof grist !== 'undefined') {
+        isGristMode = true;
+        grist.ready({ requiredAccess: 'full' });
+        try { grist.selectedTable.getTableId().then(id => { BOUND_TABLE = id; }).catch(() => {}); } catch (e) {}
+
+        const start = async () => {
+            if (optionsApplied) return;
+            optionsApplied = true;
+            try {
+                await scanGristTables();
+                applyConfig(true);
+                READY = true;
+                setStatus(`Grist connecté · ${Object.keys(CACHE).length} table(s) géographique(s)`, true);
+                if (!ASSIGNED.chaussee.length) showToast('Aucune table de segments détectée : ouvrez « Tables & champs ».');
+            } catch (e) {
+                console.error(e);
+                setStatus('Erreur Grist', false);
+                showToast("Erreur d'accès Grist : vérifiez l'option « Accès complet ».");
             }
-        }
-
-        function openDrawerWithData(props) {
-            const drawer = document.getElementById('right-drawer');
-            const content = document.getElementById('drawer-content');
-            drawer.classList.remove('translate-x-full');
-
-            let html = `<div class="space-y-3">`;
-            for (const [key, val] of Object.entries(props)) {
-                html += `<div class="bg-slate-50 p-2.5 rounded border border-slate-100">
-                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">${key}</span>
-                    <p class="text-slate-800 font-medium text-xs mt-0.5">${val !== null && val !== undefined ? val : 'Non renseigné'}</p>
-                </div>`;
-            }
-            html += `</div>`;
-            content.innerHTML = html;
-        }
-
-        function closeDrawer() {
-            document.getElementById('right-drawer').classList.add('translate-x-full');
-        }
-
-        function openConfigModal() {
-            updateFieldDropdowns();
-            document.getElementById('config-modal').classList.remove('hidden');
-        }
-
-        function closeConfigModal() {
-            document.getElementById('config-modal').classList.add('hidden');
-        }
-
-        function saveConfigAndReload() {
-            for (const key of Object.keys(mappingConfig)) {
-                if (key !== 'table') {
-                    const el = document.getElementById(`field-${key}`);
-                    if (el) mappingConfig[key] = el.value;
-                }
-            }
-            // Sauvegarde persistante dans le navigateur
-            localStorage.setItem('sig_voirie_mapping', JSON.stringify(mappingConfig));
-            closeConfigModal();
-            renderDataOnMap();
-        }
-
-        function loadDemoData() {
-            tableColumns = ['id', 'commune', 'longueur', 'domanialite', 'structure', 'age', 'trafic', 'Note_Prio', 'grav_fissure', 'geometry'];
-            gristData = [
-                { id: 1, commune: "Saint-Vincent", longueur: 1250, domanialite: "Rue", structure: "Enrobé", age: 4, trafic: 2, Note_Prio: 8, grav_fissure: 4, geometry: "MULTILINESTRING ((4.369 46.079, 4.375 46.082))" },
-                { id: 2, commune: "Amplepuis", longueur: 820, domanialite: "Chemin", structure: "Enduit", age: 12, trafic: 1, Note_Prio: 3, grav_fissure: 1, geometry: "MULTILINESTRING ((4.375 46.082, 4.381 46.085))" }
-            ];
-            updateFieldDropdowns();
-            renderDataOnMap();
-        }
-
-        function capitalize(s) {
-            return s.charAt(0).toUpperCase() + s.slice(1);
-        }
-
-        window.onload = function() {
-            initMap();
-            initGrist();
-            updateViewControls();
         };
-    </script>
+        grist.onOptions(opts => {
+            if (opts && opts.cfg) {
+                const incoming = mergeCfg(opts.cfg);
+                if (JSON.stringify(incoming) !== JSON.stringify(CFG)) { CFG = incoming; if (READY) applyConfig(false); }
+            }
+            start();
+        });
+        setTimeout(start, 1500);                                  // repli si onOptions n'est jamais appelé
+
+        grist.onRecords(() => {                                   // la table liée a changé
+            if (!READY) return;
+            clearTimeout(refreshTimer);
+            refreshTimer = setTimeout(refreshAssigned, 400);
+        });
+        grist.onRecord(rec => {                                   // curseur Grist -> sélection carte
+            if (!rec || !rec.id || (BOUND_TABLE && BOUND_TABLE !== tableOfRole('chaussee'))) return;
+            const f = ASSIGNED.chaussee.find(x => x.properties._row === rec.id);
+            if (f && (!selectedFeature || selectedFeature.properties._row !== rec.id)) openInspectorForFeature(f, true, true);
+        });
+    } else {
+        setStatus('Mode démonstration (hors Grist)', false);
+        resetToDemoData();
+    }
+}
+
+/* =========================================================================
+   6. DONNÉES DE DÉMONSTRATION (au même schéma que le fichier réel)
+   ========================================================================= */
+function demoData() {
+    const P = (g, e) => ({ g, e });
+    const rows = [
+        ['VCC12', 'Chemin du Crêt', 'VC CHEMIN', 'Thizy-les-Bourgs', 420.5, 2, 3, 2, 'BB', 6.8, { fiss: P(2, 2), rep: P(1, 2), ndp: P(1, 1) }, [[4.3815, 46.0710], [4.3845, 46.0732], [4.3878, 46.0748]]],
+        ['VCC04', 'Chemin de la Roche', 'VC CHEMIN', 'Thizy-les-Bourgs', 680, 3, 2, 1, 'Entretien courant', 3.4, { fiss: P(1, 1), def_surf: P(1, 2) }, [[4.3878, 46.0748], [4.3910, 46.0730], [4.3948, 46.0712]]],
+        ['CR50', 'Chemin rural 50', 'CR', 'Ronno', 315.2, 3, 0, 0, 'Aucune', 1.6, {}, [[4.3845, 46.0732], [4.3860, 46.0702], [4.3895, 46.0685]]],
+        ['VCR07', 'Rue de l\'Église', 'VC RUES', 'Ronno', 145, 1, 3, 3, 'Reprise structurelle / reprofilage', 8.9, { fiss: P(2, 1), ndp: P(2, 2), def_c: P(2, 2) }, [[4.3895, 46.0685], [4.3935, 46.0692]]],
+        ['VCR21', 'Rue des Écoles', 'VC RUES', 'Amplepuis', 260, 1, 1, 1, 'ESU / MBCF', 4.2, { fiss: P(1, 2) }, [[4.3860, 46.0702], [4.3830, 46.0690]]],
+        ['VC?4B', '', 'À qualifier', 'Amplepuis', 190, null, 0, 0, 'Aucune', 2.0, {}, null]
+    ];
+    const seg = { id: [], Pk: [], Num: [], Nom_voie: [], Classification: [], Commune: [], Longueur_m: [], Categorie: [], Ind_etat_surface: [], Ind_etat_structure: [], Solution: [], Note_prio: [], Geometrie: [] };
+    PATHOS.forEach(p => { seg['G_' + p.k] = []; seg['E_' + p.k] = []; });
+    rows.forEach((r, i) => {
+        seg.id.push(i + 1); seg.Pk.push(100 + i); seg.Num.push(r[0]); seg.Nom_voie.push(r[1]); seg.Classification.push(r[2]); seg.Commune.push(r[3]);
+        seg.Longueur_m.push(r[4]); seg.Categorie.push(r[5]); seg.Ind_etat_surface.push(r[6]); seg.Ind_etat_structure.push(r[7]);
+        seg.Solution.push(r[8]); seg.Note_prio.push(r[9]);
+        PATHOS.forEach(p => { const v = r[10][p.k]; seg['G_' + p.k].push(v ? v.g : 0); seg['E_' + p.k].push(v ? v.e : 0); });
+        const c = r[11];
+        // une ligne en GeoJSON, une en WKT (pour exercer les deux lecteurs), une sans géométrie
+        seg.Geometrie.push(!c ? '' : i % 2 ? 'MULTILINESTRING ((' + c.map(p => p.join(' ')).join(', ') + '))' : JSON.stringify({ type: 'LineString', coordinates: c }));
+    });
+    const sq = (x0, y0, x1, y1) => JSON.stringify({ type: 'Polygon', coordinates: [[[x0, y0], [x1, y0], [x1, y1], [x0, y1], [x0, y0]]] });
+    return {
+        DEMO_Segments: seg,
+        DEMO_Sols: { id: [1, 2], type_sol: ['Arène granitique altérée', 'Alluvions argilo-limoneuses'], portance: ['PF2', 'PF1'], geometry: [sq(4.3805, 46.0700, 4.3880, 46.0755), sq(4.3880, 46.0680, 4.3960, 46.0755)] },
+        DEMO_Aleas: { id: [1, 2, 3], type_alea: ['RGA (Retrait-Gonflement Argiles)', 'Inondation / Ruissellement', 'Mouvement de terrain / Glissement'], niveau: ['Moyen', 'Fort', 'Fort'],
+                      geometry: [sq(4.3875, 46.0682, 4.3955, 46.0745), sq(4.3835, 46.0695, 4.3895, 46.0725), sq(4.3810, 46.0720, 4.3860, 46.0752)] }
+    };
+}
+function resetToDemoData() {
+    const d = demoData();
+    for (const id in d) registerTable(id, d[id], 'demo');
+    CFG.tables = { chaussee: 'DEMO_Segments', sols: 'DEMO_Sols', aleas: 'DEMO_Aleas' };
+    closeMappingModal();
+    applyConfig(true);
+    showToast('Données de démonstration chargées.');
+}
+
+/* =========================================================================
+   7. NAVIGATION (objets, vues, modes)
+   ========================================================================= */
+function buildStaticUI() {
+    $('objNav').innerHTML = Object.entries(OBJECTS).map(([k, [l, ic]]) =>
+        `<button onclick="switchNetworkObject('${k}')" id="objBtn-${k}" class="obj-tab px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-all text-slate-300 hover:text-white hover:bg-slate-800 shrink-0">
+            <i data-lucide="${ic}" class="w-3.5 h-3.5"></i><span>${l}</span></button>`).join('');
+    $('viewTabs').innerHTML = VIEW_TABS.map(([k, l, ic]) =>
+        `<button onclick="switchViewTab('${k}')" id="viewTab-${k}" class="view-tab py-2 px-1 text-[11px] font-medium border-b-2 border-transparent text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-t-lg flex flex-col items-center gap-1 transition-all">
+            <i data-lucide="${ic}" class="w-3.5 h-3.5"></i><span class="truncate w-full text-center">${l}</span></button>`).join('');
+    const card = (name, fn, [k, t, d, ic, icc], i) => `
+        <label class="radio-card flex items-start gap-3 p-2.5 rounded-xl border border-slate-200 cursor-pointer hover:bg-slate-50 transition-all">
+            <input type="radio" name="${name}" value="${k}" ${i === 0 ? 'checked' : ''} onchange="${fn}(this.value)" class="hidden">
+            <span class="radio-dot w-4 h-4 rounded-full border-2 border-slate-300 flex items-center justify-center shrink-0 mt-0.5"></span>
+            <div class="flex-1 min-w-0"><span class="text-xs font-semibold text-slate-800 block">${t}</span><span class="text-[11px] text-slate-500 block">${d}</span></div>
+            ${ic ? `<i data-lucide="${ic}" class="w-4 h-4 ${icc} shrink-0 mt-0.5"></i>` : ''}
+        </label>`;
+    $('modes-patrimoine').innerHTML = MODES.patrimoine.map((m, i) => card('patrimoineMode', 'setPatrimoineMode', m, i)).join('');
+    $('modes-usage').innerHTML = MODES.usage.map((m, i) => card('usageMode', 'setUsageMode', m, i)).join('');
+    $('pathoTypeSelect').innerHTML = PATHOS.map(p => `<option value="${p.k}">${p.label}</option>`).join('');
+    $('inspTabs').innerHTML = [...VIEW_TABS.map(v => [v[0], v[3]]), ['tout', 'Tout']].map(([k, l]) =>
+        `<button onclick="switchInspectorTab('${k}')" id="inspTab-${k}" class="insp-tab py-1.5 px-1 rounded-md text-[10px] font-medium text-slate-600 hover:text-slate-900">${l}</button>`).join('');
+    switchNetworkObject('chaussee', true);
+    switchViewTab('patrimoine', true);
+    updatePrioButtons();
+    icons();
+}
+
+function switchNetworkObject(k, silent) {
+    currentObject = k;
+    document.querySelectorAll('.obj-tab').forEach(b => { b.className = 'obj-tab px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-all text-slate-300 hover:text-white hover:bg-slate-800 shrink-0'; });
+    $('objBtn-' + k).className = 'obj-tab px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all bg-sky-600 text-white shadow-sm shrink-0';
+    $('activeObjectBadge').textContent = 'Objet : ' + OBJECTS[k][0];
+    const isCh = k === 'chaussee';
+    $('chausseeViewsContainer').classList.toggle('hidden', !isCh);
+    $('otherObjectPlaceholder').classList.toggle('hidden', isCh);
+    if (!isCh) $('placeholderObjTitle').textContent = 'Module ' + OBJECTS[k][0];
+    if (isCh && !silent) rerenderMap();
+}
+
+function switchViewTab(k, silent) {
+    currentViewTab = k;
+    document.querySelectorAll('.view-tab').forEach(b => { b.className = 'view-tab py-2 px-1 text-[11px] font-medium border-b-2 border-transparent text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-t-lg flex flex-col items-center gap-1 transition-all'; });
+    $('viewTab-' + k).className = 'view-tab py-2 px-1 text-[11px] font-semibold border-b-2 border-sky-600 text-sky-700 bg-white rounded-t-lg flex flex-col items-center gap-1 transition-all';
+    document.querySelectorAll('.view-panel').forEach(p => p.classList.add('hidden'));
+    $('panel-' + k).classList.remove('hidden');
+    if (selectedFeature) switchInspectorTab(k);
+    if (!silent) rerenderMap();
+}
+function setPatrimoineMode(m) { currentPatrimoineMode = m; rerenderMap(); }
+function setUsageMode(m) { currentUsageMode = m; $('aleaSelectorBox').classList.toggle('hidden', m !== 'aleas'); rerenderMap(); }
+function setPathoMode(m) { currentPathoMode = m; rerenderMap(); }
+function setProgMode(m) { currentProgMode = m; rerenderMap(); }
+function selectRadioAndRender(name, val) {
+    const r = document.querySelector(`input[name="${name}"][value="${val}"]`);
+    if (r) r.checked = true;
+    if (name === 'pathoMode') currentPathoMode = val;
+    rerenderMap();
+}
+
+function updatePrioButtons() {
+    const { high, med } = CFG.prio;
+    const defs = [['ALL', 'Toutes', null], ['HIGH', `Prioritaire (≥ ${high})`, 'bg-rose-600'], ['MED', `Moyenne (${med} – ${high})`, 'bg-amber-500'], ['LOW', `Faible (< ${med})`, 'bg-emerald-500']];
+    $('prioButtons').innerHTML = defs.map(([k, l, dot]) => {
+        const on = currentPriorityFilter === k;
+        return `<button onclick="setPriorityFilter('${k}')" class="px-2.5 py-1.5 rounded-lg text-xs ${on ? 'font-semibold bg-sky-600 text-white shadow-sm' : 'font-medium bg-white border border-slate-200 text-slate-700 hover:bg-slate-100'} transition-all flex items-center justify-center gap-1.5">
+            ${dot ? `<span class="w-2 h-2 rounded-full ${dot}"></span>` : ''}${l}</button>`;
+    }).join('');
+}
+function setPriorityFilter(k) { currentPriorityFilter = k; updatePrioButtons(); rerenderMap(); }
+
+/* =========================================================================
+   8. RENDU CARTOGRAPHIQUE
+   ========================================================================= */
+function initMap() {
+    map = L.map('map', { zoomControl: false }).setView([46.0, 4.4], 11);
+    L.control.zoom({ position: 'topright' }).addTo(map);
+    L.control.scale({ imperial: false, position: 'bottomright' }).addTo(map);
+    const planClair = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap &copy; CARTO' }).addTo(map);
+    const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap' });
+    const sat = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19, attribution: 'Tiles &copy; Esri' });
+    L.control.layers({ 'Fond technique épuré': planClair, 'OpenStreetMap': osm, 'Orthophoto satellite': sat }, null, { position: 'topright' }).addTo(map);
+    map.createPane('polygonsPane').style.zIndex = 350;
+    map.createPane('roadsPane').style.zIndex = 450;
+    map.createPane('nodesPane').style.zIndex = 500;
+    roadRenderer = L.canvas({ pane: 'roadsPane', padding: 0.3 });     // rendu canvas : fluide avec plusieurs milliers de segments
+}
+
+function clearMapLayers() {
+    [polygonBgLayerGroup, roadLayerGroup, nodesLayerGroup].forEach(l => l && map.removeLayer(l));
+    polygonBgLayerGroup = roadLayerGroup = nodesLayerGroup = null;
+    LAYERS.clear();
+}
+function showMissingDataWarning(t, d) { $('missingDataTitle').textContent = t; $('missingDataDesc').textContent = d; $('missingDataBanner').classList.remove('hidden'); }
+function hideMissingDataWarning() { $('missingDataBanner').classList.add('hidden'); }
+
+function prioClass(p) { return p >= CFG.prio.high ? 'HIGH' : p >= CFG.prio.med ? 'MED' : 'LOW'; }
+
+function visibleRoads() {
+    const q = $('globalSearchInput').value.toLowerCase().trim();
+    const commune = $('communeFilter').value;
+    return ASSIGNED.chaussee.filter(f => {
+        const p = f.properties;
+        if (commune !== 'ALL' && p.commune !== commune) return false;
+        if (q && !`${p.num || ''} ${p.nom_voie || ''} ${p.commune || ''} ${p.id ?? ''}`.toLowerCase().includes(q)) return false;
+        if (currentViewTab === 'programmation' && currentPriorityFilter !== 'ALL') {
+            const pr = parseFloat(p.prio);
+            if (isNaN(pr) || prioClass(pr) !== currentPriorityFilter) return false;
+        }
+        return true;
+    });
+}
+
+const uidOf = f => f.properties._uid;
+function styleOf(f) {
+    const sel = selectedUid && uidOf(f) === selectedUid;
+    const s = EV.getStyle(f);
+    return { color: sel ? '#0284c7' : s.color, weight: sel ? 8 : (s.weight || 5), opacity: 0.95, dashArray: s.dashArray || null, lineCap: 'round', lineJoin: 'round' };
+}
+
+function rerenderMap(zoom) {
+    if (!map) return;
+    clearMapLayers();
+    hideMissingDataWarning();
+    const roads = visibleRoads();
+    const km = roads.reduce((a, f) => a + (parseFloat(f.properties.longueur) || 0), 0) / 1000;
+    $('networkFeatureCount').textContent = `${roads.length} segment${roads.length > 1 ? 's' : ''} · ${km.toFixed(1)} km`;
+    $('progFilteredCount').textContent = `${roads.length} segment${roads.length > 1 ? 's' : ''}`;
+    $('progFilteredLength').textContent = km >= 1 ? `${km.toFixed(2)} km` : `${Math.round(km * 1000)} m`;
+
+    if (currentViewTab === 'patrimoine' && currentPatrimoineMode === 'sol_support') renderSolsLayer();
+    else if (currentViewTab === 'usage' && currentUsageMode === 'aleas') renderAleasLayer();
+
+    EV = buildStyleEvaluator(roads);
+    roadLayerGroup = L.geoJSON({ type: 'FeatureCollection', features: roads }, {
+        pane: 'roadsPane', renderer: roadRenderer,
+        style: styleOf,
+        onEachFeature: (feature, layer) => {
+            const p = feature.properties;
+            LAYERS.set(uidOf(feature), layer);
+            layer.bindTooltip(`<strong>${esc(p.num || 'Segment')}</strong>${p.nom_voie ? ' - ' + esc(p.nom_voie) : ''}${p.commune ? ' · ' + esc(p.commune) : ''}`, { sticky: true });
+            layer.on('click', e => { L.DomEvent.stopPropagation(e); openInspectorForFeature(feature, false); });
+        }
+    }).addTo(map);
+    if (currentViewTab === 'patrimoine' && currentPatrimoineMode === 'segments_noeuds') renderSegmentEndpoints(roads);
+    updateDynamicLegend(EV);
+    if (zoom) zoomToNetwork();
+}
+
+function renderSolsLayer() {
+    const sols = ASSIGNED.sols;
+    if (!sols.length) return showMissingDataWarning('Couche Sols support non assignée', "Assignez une table de polygones dans « Tables & champs ».");
+    const types = [...new Set(sols.map(f => nz(f.properties.sol_type)))];
+    polygonBgLayerGroup = L.geoJSON({ type: 'FeatureCollection', features: sols }, {
+        pane: 'polygonsPane',
+        style: f => { const c = PALETTE[types.indexOf(nz(f.properties.sol_type)) % PALETTE.length]; return { color: c, weight: 1.5, fillColor: c, fillOpacity: 0.32 }; },
+        onEachFeature: (f, l) => l.bindTooltip(`Sol support : <strong>${esc(nz(f.properties.sol_type))}</strong>`, { sticky: true })
+    }).addTo(map);
+}
+
+function aleaColor(txt) {
+    txt = String(txt || '').toLowerCase();
+    if (txt.includes('rga') || txt.includes('argile')) return '#d97706';
+    if (txt.includes('inond') || txt.includes('crue')) return '#2563eb';
+    if (txt.includes('gliss') || txt.includes('mouvement')) return '#dc2626';
+    return '#e11d48';
+}
+function renderAleasLayer() {
+    const all = ASSIGNED.aleas;
+    if (!all.length) return showMissingDataWarning('Couche Aléas naturels non assignée', 'Le filaire reste affiché. Assignez une table de polygones dans « Tables & champs ».');
+    const sel = $('aleaTypeSelect').value;
+    const keys = { RGA: ['RGA', 'ARGILE'], INONDATION: ['INOND', 'CRUE'], GLISSEMENT: ['GLISS', 'MOUVEMENT', 'TERRAIN'], CAVITE: ['CAVIT'] };
+    const feats = all.filter(f => sel === 'ALL' || (keys[sel] || []).some(k => String(f.properties.alea_type || '').toUpperCase().includes(k)));
+    if (!feats.length) showMissingDataWarning('Aucun zonage pour cet aléa', "Aucune zone répertoriée pour le type d'aléa sélectionné.");
+    polygonBgLayerGroup = L.geoJSON({ type: 'FeatureCollection', features: feats }, {
+        pane: 'polygonsPane',
+        style: f => { const c = aleaColor(f.properties.alea_type); return { color: c, weight: 2, fillColor: c, fillOpacity: 0.35 }; },
+        onEachFeature: (f, l) => l.bindTooltip(`Aléa : <strong>${esc(nz(f.properties.alea_type))}</strong>${f.properties.alea_niveau ? ' (' + esc(f.properties.alea_niveau) + ')' : ''}`, { sticky: true })
+    }).addTo(map);
+}
+
+function renderSegmentEndpoints(roads) {
+    const markers = [];
+    roads.forEach(f => {
+        const g = f.geometry;
+        const lines = g.type === 'MultiLineString' ? g.coordinates : g.type === 'LineString' ? [g.coordinates] : [];
+        lines.forEach(line => {
+            if (line.length < 2) return;
+            [line[0], line[line.length - 1]].forEach((pt, i) => markers.push(
+                L.circleMarker([pt[1], pt[0]], { pane: 'nodesPane', radius: 5, fillColor: i === 0 ? '#10b981' : '#ef4444', color: '#fff', weight: 1.5, fillOpacity: 1 })
+                    .bindTooltip(i === 0 ? 'Début de segment' : 'Fin de segment')));
+        });
+    });
+    nodesLayerGroup = L.layerGroup(markers).addTo(map);
+}
+
+/* ---- Évaluateur de style + éléments de légende ---- */
+function buildStyleEvaluator(roads) {
+    const has = k => roads.some(f => filled(f.properties[k]));
+    const absent = (title, banner, desc) => {
+        showMissingDataWarning(banner, desc);
+        return { title, items: [{ color: GREY, label: 'Donnée absente (filaire)' }], getStyle: () => ({ color: GREY, weight: 4 }) };
+    };
+    const fixed = (title, color, label) => ({ title, items: [{ color, label }], getStyle: () => ({ color, weight: 4.5 }) });
+    const categorical = (title, k, fixedColors = {}) => {
+        const vals = [...new Set(roads.map(f => nz(f.properties[k])))].sort((a, b) => a.localeCompare(b, 'fr'));
+        const free = vals.filter(v => v !== 'Non renseigné' && !fixedColors[v]);
+        const colorOf = v => v === 'Non renseigné' ? GREY : (fixedColors[v] || PALETTE[free.indexOf(v) % PALETTE.length]);
+        return { title, items: vals.map(v => ({ color: colorOf(v), label: v })), getStyle: f => ({ color: colorOf(nz(f.properties[k])), weight: 5 }) };
+    };
+    const levels = (title, k, labels) => ({
+        title, items: [...[1, 2, 3].map(n => ({ color: LEVEL_COLORS[n], label: labels[n - 1] })), { color: GREY, label: 'Non renseigné' }],
+        getStyle: f => { const v = String(f.properties[k]); return LEVEL_COLORS[v] ? { color: LEVEL_COLORS[v], weight: { 1: 6, 2: 5, 3: 4 }[v] } : { color: GREY, weight: 4 }; }
+    });
+    const needed = (key, title, banner) => has(key) ? null : absent(title, banner, `Aucune valeur dans la colonne assignée à « ${banner.replace(/ (non|absente).*/, '')} ». Vérifiez « Tables & champs ».`);
+
+    if (currentViewTab === 'patrimoine') {
+        const m = currentPatrimoineMode;
+        if (m === 'filaire') return fixed('Filaire du réseau', '#0284c7', 'Segment de voirie');
+        if (m === 'segments_noeuds') return { title: 'Segments & extrémités', items: [{ color: '#6366f1', label: 'Segment linéaire' }, { color: '#10b981', label: 'Nœud début', isDot: true }, { color: '#ef4444', label: 'Nœud fin', isDot: true }], getStyle: () => ({ color: '#6366f1', weight: 4.5 }) };
+        if (m === 'sol_support') {
+            const types = [...new Set(ASSIGNED.sols.map(f => nz(f.properties.sol_type)))];
+            return { title: 'Type de sol support', items: [...types.map((t, i) => ({ color: PALETTE[i % PALETTE.length], label: t, isPoly: true })), { color: '#1e293b', label: 'Filaire voirie (superposé)' }], getStyle: () => ({ color: '#1e293b', weight: 4 }) };
+        }
+        const cfg = { domanialite: ['Classification domaniale', DOMAN_COLORS], structure: ['Structure de chaussée', {}] }[m];
+        if (cfg) return needed(m, cfg[0], cfg[0] + ' non renseignée') || categorical(cfg[0], m, cfg[1]);
+        if (m === 'age') {
+            const a = needed('age', 'Âge de la chaussée', 'Âge non renseigné'); if (a) return a;
+            const cls = [[5, '#10b981', '0 à 5 ans (récent)'], [10, '#3b82f6', '6 à 10 ans'], [15, '#eab308', '11 à 15 ans'], [20, '#f97316', '16 à 20 ans'], [Infinity, '#dc2626', '> 20 ans (ancien)']];
+            return { title: 'Âge de la chaussée', items: [...cls.map(c => ({ color: c[1], label: c[2] })), { color: GREY, label: 'Non renseigné' }],
+                     getStyle: f => { const v = parseFloat(f.properties.age); const c = isNaN(v) ? null : cls.find(c => v <= c[0]); return { color: c ? c[1] : GREY, weight: 5 }; } };
+        }
+    }
+
+    if (currentViewTab === 'usage') {
+        const m = currentUsageMode;
+        if (m === 'aleas') return { title: 'Exposition aux aléas', items: [{ color: '#d97706', label: 'Zone RGA (argiles)', isPoly: true }, { color: '#2563eb', label: 'Zone inondation', isPoly: true }, { color: '#dc2626', label: 'Zone glissement', isPoly: true }, { color: '#e11d48', label: 'Autre aléa', isPoly: true }, { color: '#1e293b', label: 'Filaire voirie' }], getStyle: () => ({ color: '#1e293b', weight: 4 }) };
+        if (m === 'trafic') {
+            const a = needed('trafic', 'Niveaux de trafic', 'Trafic non renseigné'); if (a) return a;
+            const c = { fort: '#dc2626', moy: '#f59e0b', faib: '#10b981' };
+            return { title: 'Niveaux de trafic', items: [{ color: c.fort, label: 'Trafic fort' }, { color: c.moy, label: 'Trafic moyen' }, { color: c.faib, label: 'Trafic faible' }, { color: GREY, label: 'Non renseigné' }],
+                     getStyle: f => { const v = String(f.properties.trafic ?? '').toLowerCase(); if (v.includes('fort') || v === '3') return { color: c.fort, weight: 6 }; if (v.includes('moy') || v === '2') return { color: c.moy, weight: 5 }; if (v.includes('faib') || v === '1') return { color: c.faib, weight: 4.5 }; return { color: GREY, weight: 4 }; } };
+        }
+        if (m === 'fonction') return needed('fonction', 'Fonction de la voie', 'Fonction non renseignée') || levels('Fonction de la voie', 'fonction', ['Niveau 1 (structurant)', 'Niveau 2 (intermédiaire)', 'Niveau 3 (desserte locale)']);
+        if (m === 'categorie') return needed('categorie', 'Catégorie de la voie', 'Catégorie non renseignée') || levels('Catégorie de la voie', 'categorie', ['Catégorie 1', 'Catégorie 2', 'Catégorie 3']);
+        if (m === 'securite_tonnage') {
+            const a = needed('tonnage', 'Sécurité & tonnage', 'Restrictions non renseignées'); if (a) return a;
+            return { title: 'Limitation tonnage / gabarit', items: [{ color: '#dc2626', label: 'Restriction active' }, { color: '#10b981', label: 'Sans restriction' }],
+                     getStyle: f => { const v = String(f.properties.tonnage ?? '').toLowerCase(); return v && v !== 'aucune' && v !== 'non' ? { color: '#dc2626', weight: 5.5, dashArray: '8, 6' } : { color: '#10b981', weight: 4.5 }; } };
+        }
+    }
+
+    if (currentViewTab === 'pathologies') {
+        if (currentPathoMode === 'pathologie_individuelle') {
+            const k = $('pathoTypeSelect').value, label = $('pathoTypeSelect').selectedOptions[0].text;
+            if (!has('g_' + k) && !has('e_' + k)) return absent(label, label + ' : non relevé', `Les colonnes de gravité et d'étendue de « ${label} » sont vides ou non assignées.`);
+            return { title: label, items: [...Object.entries(GRAVE).map(([l, s]) => ({ color: s.color, label: l, dash: !!s.dashArray })), { color: GREY, label: 'Non relevé' }],
+                     getStyle: f => { const l = glabel(f.properties, k); return l ? GRAVE[l] : { color: GREY, weight: 4 }; } };
+        }
+        const key = $('etatTypeSelect').value, title = key === 'etat_surf' ? 'État de surface' : 'État de structure';
+        if (!has(key)) return absent(title, title + ' non renseigné', 'Aucune valeur dans la colonne assignée à cet indicateur.');
+        return { title, items: [...INDIC.map(i => ({ color: i.color, label: i.label })), { color: GREY, label: 'Non renseigné' }],
+                 getStyle: f => { const v = f.properties[key]; const i = filled(v) ? INDIC.find(x => x.v === Number(v)) : null; return { color: i ? i.color : GREY, weight: i ? 4.5 + i.v * 0.5 : 4 }; } };
+    }
+
+    if (currentViewTab === 'programmation') {
+        if (currentProgMode === 'prio') {
+            const a = needed('prio', 'Note de priorité', 'Note de priorité absente'); if (a) return a;
+            const C = { HIGH: ['#dc2626', 6], MED: ['#f59e0b', 5], LOW: ['#10b981', 4.5] };
+            return { title: 'Note de priorité', items: [{ color: C.HIGH[0], label: `Prioritaire (≥ ${CFG.prio.high})` }, { color: C.MED[0], label: `Moyenne (${CFG.prio.med} – ${CFG.prio.high})` }, { color: C.LOW[0], label: `Faible (< ${CFG.prio.med})` }, { color: GREY, label: 'Non renseigné' }],
+                     getStyle: f => { const v = parseFloat(f.properties.prio); if (isNaN(v)) return { color: GREY, weight: 4 }; const c = C[prioClass(v)]; return { color: c[0], weight: c[1] }; } };
+        }
+        return needed('solution', 'Solution de travaux', 'Solution absente') || categorical('Solution de travaux', 'solution', SOLUTION_COLORS);
+    }
+    return fixed('Réseau', '#0284c7', 'Segment');
+}
+
+// gravité (0/1/2) × étendue (1 localisé / 2 généralisé) -> classe de la légende
+function glabel(p, k) {
+    const g = p['g_' + k], e = p['e_' + k];
+    if (!filled(g) && !filled(e)) return null;
+    if (!g || !e) return 'Absence de défauts';
+    return (g === 1 ? 'Défauts légers' : 'Défauts graves') + (e === 1 ? ' et localisés' : ' et généralisés');
+}
+
+function updateDynamicLegend(ev) {
+    $('legendTitle').textContent = ev.title || 'Légende';
+    $('legendBody').innerHTML = (ev.items || []).map(it => {
+        let sw = `<span class="w-4 h-1.5 rounded-full inline-block shrink-0" style="background-color:${it.color}"></span>`;
+        if (it.dash) sw = `<span class="w-4 inline-block shrink-0" style="border-top:3px dashed ${it.color}"></span>`;
+        if (it.isPoly) sw = `<span class="w-3.5 h-3.5 rounded-sm inline-block shrink-0 border" style="background-color:${it.color}45; border-color:${it.color}"></span>`;
+        if (it.isDot) sw = `<span class="w-3 h-3 rounded-full inline-block shrink-0 border-2 border-white shadow-sm" style="background-color:${it.color}"></span>`;
+        return `<div class="flex items-center gap-2">${sw}<span class="text-slate-700 leading-tight">${esc(it.label)}</span></div>`;
+    }).join('');
+}
+
+function updateCommuneFilter() {
+    const sel = $('communeFilter'), prev = sel.value;
+    const communes = [...new Set(ASSIGNED.chaussee.map(f => f.properties.commune).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'fr'));
+    sel.innerHTML = `<option value="ALL">Toutes (${communes.length})</option>` + communes.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('');
+    sel.value = communes.includes(prev) ? prev : 'ALL';
+}
+
+/* =========================================================================
+   9. FICHE D'IDENTIFICATION (tiroir droit)
+   ========================================================================= */
+function openInspectorForFeature(f, zoom, fromGrist) {
+    const prev = selectedUid;
+    selectedFeature = f; selectedUid = uidOf(f);
+    const p = f.properties;
+    $('inspectorDrawer').classList.remove('hidden');
+    $('inspBadgeNum').textContent = p.num || 'SEGMENT';
+    $('inspCommune').textContent = p.commune || 'Commune non renseignée';
+    $('inspTitle').textContent = p.nom_voie || `Segment #${p.id ?? p._row}`;
+    const len = parseFloat(p.longueur);
+    $('inspLength').innerHTML = `<i data-lucide="ruler" class="w-3 h-3"></i> ${isNaN(len) ? 'Longueur N/C' : Math.round(len) + ' m'}`;
+    $('inspId').innerHTML = `<i data-lucide="hash" class="w-3 h-3"></i> ${p.id ?? p._row}`;
+    switchInspectorTab(currentViewTab);
+    [prev, selectedUid].forEach(u => { const l = u && LAYERS.get(u); if (l) l.setStyle(styleOf(l.feature)); });
+    const sl = LAYERS.get(selectedUid); if (sl && sl.bringToFront) sl.bringToFront();
+    if (isGristMode && !fromGrist && p._row && (!BOUND_TABLE || BOUND_TABLE === tableOfRole('chaussee'))) {
+        try { grist.setCursorPos({ rowId: p._row }).catch(() => {}); } catch (e) {}
+    }
+    if (zoom) zoomToSelectedSegment();
+    icons();
+}
+
+function closeInspector() {
+    const prev = selectedUid;
+    selectedFeature = null; selectedUid = null;
+    $('inspectorDrawer').classList.add('hidden');
+    const l = prev && LAYERS.get(prev); if (l) l.setStyle(styleOf(l.feature));
+}
+
+function switchInspectorTab(k) {
+    currentInspectorTab = k;
+    document.querySelectorAll('.insp-tab').forEach(b => { b.className = 'insp-tab py-1.5 px-1 rounded-md text-[10px] font-medium text-slate-600 hover:text-slate-900'; });
+    const b = $('inspTab-' + k); if (b) b.className = 'insp-tab py-1.5 px-1 rounded-md text-[10px] font-bold bg-white text-sky-700 shadow-sm';
+    if (!selectedFeature) return;
+    const p = selectedFeature.properties, box = $('inspectorContent');
+    const row = (label, v, badge) => {
+        const val = filled(v) ? (badge ? `<span class="px-2 py-0.5 rounded text-[11px] font-bold text-white" style="background-color:${badge}">${esc(v)}</span>` : `<span class="font-semibold text-slate-800 text-right">${esc(v)}</span>`)
+                              : '<span class="text-slate-400 italic font-normal">Non renseigné</span>';
+        return `<div class="flex items-center justify-between py-2 border-b border-slate-100 last:border-0 gap-2"><span class="text-slate-500">${label}</span>${val}</div>`;
+    };
+    const card = (title, body) => `<div class="bg-slate-50 rounded-xl p-3 border border-slate-200/80"><h4 class="text-[10px] font-bold uppercase tracking-wider text-sky-700 mb-1.5">${title}</h4>${body}</div>`;
+    const withUnit = (v, u) => filled(v) ? `${v} ${u}` : null;
+    if (k === 'patrimoine') {
+        box.innerHTML = card('Caractéristiques patrimoniales',
+            row('Numéro de voie', p.num) + row('Nom de la voie', p.nom_voie) + row('Commune', p.commune) + row('Classification domaniale', p.domanialite) +
+            row('Structure de chaussée', p.structure) + row('Âge de la chaussée', withUnit(p.age, 'ans')) + row('Longueur du segment', filled(p.longueur) ? Math.round(p.longueur) + ' m' : null) +
+            row('Segment / tronçon', `${p.id ?? '-'} / ${p.id_tronc ?? '-'}`) + row('Observation', p.observation));
+    } else if (k === 'usage') {
+        box.innerHTML = card('Usage, hiérarchie & contraintes',
+            row('Niveau de trafic', p.trafic) + row('Fonction de la voie', p.fonction) + row('Catégorie de la voie', p.categorie) +
+            row('Limitation tonnage / gabarit', p.tonnage) + row('Enjeu de sécurité', p.securite));
+    } else if (k === 'pathologies') {
+        const ind = v => { const i = INDIC.find(x => x.v === Number(v)); return i && filled(v) ? [i.label, i.color] : [null, null]; };
+        const s = ind(p.etat_surf), t = ind(p.etat_struct);
+        const patho = PATHOS.map(x => { const l = glabel(p, x.k); return row(x.label, l, l ? GRAVE[l].color : null); }).join('');
+        box.innerHTML = card('Indicateurs d\'état', row('État de surface', s[0], s[1]) + row('État de structure', t[0], t[1])) +
+                        card('Relevé des pathologies', patho);
+    } else if (k === 'programmation') {
+        const pr = parseFloat(p.prio), col = isNaN(pr) ? null : { HIGH: '#dc2626', MED: '#f59e0b', LOW: '#10b981' }[prioClass(pr)];
+        box.innerHTML = card('Programmation & travaux',
+            row('Note de priorité', filled(p.prio) ? Number(p.prio).toFixed(2) : null, col) + row('Solution de travaux', p.solution) +
+            row('Année programmée', p.annee_prog) + row('Estimation financière', withUnit(p.cout, '€')));
+    } else {
+        const raw = Object.entries(p._raw).sort(([a], [b]) => a.localeCompare(b));
+        box.innerHTML = card('Toutes les colonnes de la table', raw.map(([c, v]) => row(esc(c), v)).join(''));
+    }
+}
+
+function zoomToSelectedSegment() {
+    const l = selectedUid && LAYERS.get(selectedUid);
+    if (l && l.getBounds) map.fitBounds(l.getBounds(), { padding: [90, 90], maxZoom: 17 });
+}
+function zoomToNetwork() {
+    if (roadLayerGroup && roadLayerGroup.getLayers().length) {
+        const b = roadLayerGroup.getBounds();
+        if (b.isValid()) map.fitBounds(b, { padding: [50, 50] });
+    }
+}
+function toggleLeftSidebar(show) {
+    $('leftSidebar').classList.toggle('hidden', !show);
+    $('openLeftSidebarBtn').classList.toggle('hidden', show);
+    setTimeout(() => map.invalidateSize(), 250);
+}
+function showToast(msg) {
+    $('toastMessage').textContent = msg;
+    const t = $('toastNotification'); t.classList.remove('hidden');
+    clearTimeout(showToast._t); showToast._t = setTimeout(() => t.classList.add('hidden'), 4000);
+}
+
+/* =========================================================================
+   10. MODALE : TABLES, CHAMPS, SEUILS
+   ========================================================================= */
+function openMappingModal() {
+    DRAFT = JSON.parse(JSON.stringify(CFG));
+    ROLES.forEach(r => { if (DRAFT.tables[r.k] === undefined) DRAFT.tables[r.k] = r._table || ''; });
+    renderMappingModal();
+    $('mappingModal').classList.remove('hidden');
+}
+function closeMappingModal() { $('mappingModal').classList.add('hidden'); DRAFT = null; }
+
+function harvestDraft() {                                   // recopie les listes de champs et les seuils dans DRAFT
+    if (!DRAFT) return;
+    document.querySelectorAll('#mappingBody select[data-key]').forEach(s => {
+        DRAFT.map[s.dataset.role] = DRAFT.map[s.dataset.role] || {};
+        DRAFT.map[s.dataset.role][s.dataset.key] = s.value;
+    });
+    const h = $('cfgPrioHigh'), m = $('cfgPrioMed');
+    if (h && m) DRAFT.prio = { high: parseFloat(h.value) || DRAFT.prio.high, med: parseFloat(m.value) || DRAFT.prio.med };
+}
+function onDraftTable(role, id) { harvestDraft(); DRAFT.tables[role] = id; DRAFT.map[role] = {}; renderMappingModal(); }
+
+function renderMappingModal() {
+    const opt = (cols, sel) => `<option value="">— Aucun —</option>` + cols.map(c => `<option value="${esc(c)}" ${c === sel ? 'selected' : ''}>${esc(c)}</option>`).join('');
+    const tableIds = Object.keys(CACHE);
+    let h = `<p class="bg-sky-50 text-sky-900 border border-sky-200 rounded-lg p-3 leading-relaxed">Choisissez la table de chaque couche, puis vérifiez la colonne associée à chaque champ métier. Les colonnes sont pré-remplies automatiquement quand leur nom est reconnu. Un champ laissé sur « Aucun » est simplement ignoré (la vue concernée affichera un avertissement).</p>`;
+
+    ROLES.forEach(r => {
+        const id = DRAFT.tables[r.k] || '';
+        const t = CACHE[id];
+        const wantLine = r.k === 'chaussee';
+        const list = tableIds.filter(i => wantLine ? CACHE[i].geomType.includes('LineString') || !CACHE[i].geomType : CACHE[i].geomType.includes('Polygon') || !CACHE[i].geomType);
+        h += `<div class="p-3 rounded-xl border border-slate-200 bg-slate-50 space-y-3">
+            <div class="flex items-center justify-between">
+                <span class="font-bold text-slate-800 flex items-center gap-1.5"><span class="w-2.5 h-2.5 ${r.dot}"></span>${r.label}</span>
+                <span class="text-[11px] font-semibold ${t ? 'text-emerald-600' : 'text-slate-400'}">${t ? `${t.count} entité${t.count > 1 ? 's' : ''}` : 'Non assignée'}</span>
+            </div>
+            <div class="flex gap-2">
+                <select onchange="onDraftTable('${r.k}', this.value)" class="flex-1 bg-white border border-slate-300 rounded-lg p-2 text-xs font-medium outline-none">
+                    <option value="">— Aucune table —</option>
+                    ${list.map(i => `<option value="${esc(i)}" ${i === id ? 'selected' : ''}>${esc(CACHE[i].label)} (${CACHE[i].count})</option>`).join('')}
+                </select>
+                <label class="bg-white hover:bg-slate-100 border border-slate-300 px-3 py-2 rounded-lg cursor-pointer font-semibold text-slate-700 flex items-center gap-1 shrink-0" title="Importer un fichier .geojson">
+                    <i data-lucide="upload" class="w-3.5 h-3.5 text-sky-600"></i> GeoJSON
+                    <input type="file" accept=".geojson,.json" class="hidden" onchange="uploadGeoJsonForRole('${r.k}', event)">
+                </label>
+            </div>`;
+        if (t) {
+            const fields = wantLine ? FIELDS : POLY_FIELDS[r.k];
+            const groups = wantLine ? [...new Set(fields.map(f => f.g))] : [''];
+            groups.forEach(g => {
+                const fs = fields.filter(f => (f.g || '') === g && f.k !== 'geom');
+                if (!fs.length) return;
+                h += (g ? `<div class="text-[10px] font-bold uppercase tracking-wider text-slate-500 pt-1">${g}</div>` : '') +
+                    `<div class="grid grid-cols-2 md:grid-cols-3 gap-2.5">` +
+                    fs.map(f => `<div><label class="block text-[11px] font-semibold text-slate-600 mb-0.5">${f.label}</label>
+                        <select data-role="${r.k}" data-key="${f.k}" class="w-full border border-slate-300 rounded p-1.5 text-[11px] bg-white">${opt(t.cols, resolveCol(r.k, f, t.cols, DRAFT.map[r.k]))}</select></div>`).join('') + `</div>`;
+            });
+            if (wantLine) {
+                h += `<div class="text-[10px] font-bold uppercase tracking-wider text-slate-500 pt-1">Géométrie</div>
+                    <div class="max-w-xs"><select data-role="chaussee" data-key="geom" class="w-full border border-slate-300 rounded p-1.5 text-[11px] bg-white">${opt(t.cols, resolveCol('chaussee', GEOM_FIELD, t.cols, DRAFT.map.chaussee) || t.geomCol)}</select></div>`;
+            }
+        }
+        h += `</div>`;
+    });
+
+    h += `<div class="p-3 rounded-xl border border-slate-200 bg-slate-50 space-y-2">
+        <div class="font-bold text-slate-800">Seuils de la note de priorité</div>
+        <div class="flex flex-wrap items-center gap-3">
+            <label class="flex items-center gap-2">Prioritaire à partir de <input id="cfgPrioHigh" type="number" step="0.1" value="${DRAFT.prio.high}" class="w-20 border border-slate-300 rounded p-1.5 bg-white"></label>
+            <label class="flex items-center gap-2">Moyenne à partir de <input id="cfgPrioMed" type="number" step="0.1" value="${DRAFT.prio.med}" class="w-20 border border-slate-300 rounded p-1.5 bg-white"></label>
+        </div>
+        <p class="text-[11px] text-slate-500">En dessous du second seuil, la priorité est « faible ».</p></div>`;
+    $('mappingBody').innerHTML = h;
+    icons();
+}
+
+function saveMapping() {
+    harvestDraft();
+    CFG = mergeCfg(DRAFT);
+    CFG.tables = { ...DRAFT.tables };
+    closeMappingModal();
+    saveCfg();
+    applyConfig(true);
+    showToast('Configuration enregistrée.');
+}
+
+function uploadGeoJsonForRole(role, ev) {
+    const file = ev.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = e => {
+        try {
+            const d = JSON.parse(e.target.result);
+            const feats = d.type === 'FeatureCollection' ? d.features : d.type === 'Feature' ? [d] : [];
+            if (!feats.length) return showToast('Aucune géométrie valide dans ce fichier.');
+            const cols = {};
+            feats.forEach(f => Object.keys(f.properties || {}).forEach(k => { cols[k] = []; }));
+            cols.geometry = [];
+            cols.id = [];
+            feats.forEach((f, i) => {
+                for (const k in cols) if (k !== 'geometry' && k !== 'id') cols[k].push((f.properties || {})[k] ?? null);
+                cols.geometry.push(f.geometry); cols.id.push(i + 1);
+            });
+            const id = 'Fichier : ' + file.name;
+            if (!registerTable(id, cols, 'file', id)) return showToast('Fichier sans géométrie exploitable.');
+            harvestDraft();
+            DRAFT.tables[role] = id; DRAFT.map[role] = {};
+            renderMappingModal();
+            showToast(`Fichier chargé (${feats.length} entités). Ce fichier n'est pas enregistré dans Grist.`);
+        } catch (err) { showToast('Erreur de lecture du fichier GeoJSON.'); }
+    };
+    reader.readAsText(file);
+    ev.target.value = '';
+}
+
+/* =========================================================================
+   11. DÉMARRAGE
+   ========================================================================= */
+window.onload = function () {
+    loadLocalCfg();
+    initMap();
+    buildStaticUI();
+    initGristConnection();
+};
+</script>
 </body>
 </html>

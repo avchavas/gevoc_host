@@ -21,6 +21,53 @@
         .radio-card:has(input:checked) { background-color: #f0f9ff; border-color: #0284c7; box-shadow: 0 1px 3px rgba(2,132,199,.12); }
         .radio-card:has(input:checked) .radio-dot { border-color: #0284c7; background-color: #0284c7; }
         .radio-card:has(input:checked) .radio-dot::after { content: ''; display: block; width: 6px; height: 6px; border-radius: 50%; background: white; }
+        /* ---- Outils : bascule, statistiques ---- */
+        .seg { display: inline-flex; background: #e9e8e2; border-radius: 8px; padding: 2px; gap: 2px; }
+        .seg button { font-size: 11px; font-weight: 600; padding: 4px 9px; border-radius: 6px; color: #52514e; }
+        .seg button.on { background: #fff; color: #0369a1; box-shadow: 0 1px 2px rgba(0,0,0,.12); }
+        .seg button:focus-visible, .tool-btn:focus-visible { outline: 2px solid #0284c7; outline-offset: 1px; }
+        .seg-sm button { font-size: 10px; padding: 2px 7px; }
+        .stat-root { --ink: #0b0b0b; --ink2: #52514e; --muted: #898781; --grid: #e1e0d9; --surface: #fcfcfb; }
+        .kpi-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+        .kpi { background: var(--surface); border: 1px solid var(--grid); border-radius: 12px; padding: 8px 10px; }
+        .kpi .l { font-size: 10px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); font-weight: 700; }
+        .kpi .v { font-size: 18px; font-weight: 600; color: var(--ink); margin-top: 2px; }
+        .kpi .s { font-size: 10px; color: var(--ink2); }
+        .stat-card { background: var(--surface); border: 1px solid var(--grid); border-radius: 12px; padding: 12px; margin: 0; }
+        .stat-card figcaption { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
+        .stat-title { font-size: 12px; font-weight: 700; color: var(--ink); }
+        .stat-sub { font-size: 10px; color: var(--muted); }
+        .stat-row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+        .stat-chart { flex: 0 0 auto; }
+        .stat-pie { display: block; }
+        .stat-mark { cursor: default; outline: none; }
+        .stat-mark:hover, .stat-mark:focus-visible { filter: brightness(.92); }
+        .stat-mark:focus-visible { stroke: #0b0b0b; stroke-width: 2; }
+        .stat-legend { list-style: none; margin: 0; padding: 0; flex: 1 1 170px; min-width: 0; font-size: 11px; color: var(--ink2); }
+        .stat-legend li { display: grid; grid-template-columns: 12px 1fr auto 44px; gap: 6px; align-items: center; padding: 3px 0; }
+        .stat-legend .val { color: var(--ink); font-weight: 600; font-variant-numeric: tabular-nums; }
+        .stat-legend .pct { text-align: right; color: var(--muted); font-variant-numeric: tabular-nums; }
+        .sw { display: inline-block; width: 10px; height: 10px; border-radius: 3px; flex: none; }
+        .stat-bars .brow { display: grid; grid-template-columns: 38% 1fr 62px; gap: 8px; align-items: center; min-height: 26px; font-size: 11px; color: var(--ink2); outline: none; }
+        .stat-bars .brow:hover, .stat-bars .brow:focus-visible { background: #f3f2ee; border-radius: 6px; }
+        .stat-bars .btrack { height: 10px; background: transparent; display: block; }
+        .stat-bars .bfill { display: block; height: 10px; border-radius: 0 4px 4px 0; }
+        .stat-bars .bv { text-align: right; color: var(--ink); font-weight: 600; font-variant-numeric: tabular-nums; }
+        .stat-table { width: 100%; border-collapse: collapse; font-size: 11px; color: var(--ink2); }
+        .stat-table th { text-align: right; font-weight: 600; color: var(--muted); padding: 4px 6px; border-bottom: 1px solid var(--grid); }
+        .stat-table th:first-child, .stat-table td:first-child { text-align: left; }
+        .stat-table td { text-align: right; padding: 4px 6px; border-bottom: 1px solid #efeee9; font-variant-numeric: tabular-nums; }
+        .stat-table tr.tot td { font-weight: 700; color: var(--ink); border-bottom: 0; }
+        .stat-empty, .stat-note { font-size: 11px; color: var(--muted); margin: 4px 0; }
+        .stat-histo { display: block; overflow: visible; }
+        .stat-hit { cursor: default; outline: none; }
+        .stat-hit:focus-visible { stroke: #0b0b0b; stroke-width: 1.5; }
+        .stat-hleg { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 10.5px; color: var(--ink2); margin-bottom: 6px; }
+        .stat-hleg span { display: inline-flex; align-items: center; gap: 5px; }
+        .stat-tip { position: fixed; z-index: 3000; pointer-events: none; background: #fff; border: 1px solid #c3c2b7; border-radius: 8px; padding: 6px 9px; box-shadow: 0 4px 14px rgba(0,0,0,.15); max-width: 260px; }
+        .stat-tip .tip-val { font-size: 12px; font-weight: 700; color: #0b0b0b; }
+        .stat-tip .tip-name { font-size: 11px; color: #52514e; display: flex; align-items: center; gap: 6px; margin-top: 1px; }
+        .stat-tip .tip-key { width: 8px; height: 8px; border-radius: 2px; flex: none; }
     </style>
 </head>
 <body class="bg-slate-100 text-slate-800 antialiased h-screen flex flex-col overflow-hidden">
@@ -66,7 +113,31 @@
                         <i data-lucide="panel-left-close" class="w-4 h-4"></i>
                     </button>
                 </div>
+                <div id="toolSwitch" class="grid grid-cols-3 gap-1 bg-slate-200/70 p-1 rounded-xl mb-2.5" role="group" aria-label="Outil">
+                    <button id="toolBtn-carte" onclick="setTool('carte')" class="tool-btn"><i data-lucide="map" class="w-3.5 h-3.5"></i>Carte</button>
+                    <button id="toolBtn-stats" onclick="setTool('stats')" class="tool-btn"><i data-lucide="chart-pie" class="w-3.5 h-3.5"></i>Statistiques</button>
+                    <button id="toolBtn-edit" onclick="setTool('edit')" class="tool-btn"><i data-lucide="pencil" class="w-3.5 h-3.5"></i>Édition</button>
+                </div>
                 <div class="grid grid-cols-4 gap-1" id="viewTabs"></div>
+            </div>
+
+            <div id="scopeBar" class="px-3.5 py-2.5 bg-white border-b border-slate-200 space-y-2 shrink-0">
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label for="communeFilter" class="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-0.5">Commune</label>
+                        <select id="communeFilter" onchange="rerenderMap(true)" class="w-full bg-white border border-slate-300 text-slate-800 text-xs rounded-lg p-1.5 font-medium outline-none focus:ring-2 focus:ring-sky-500"><option value="ALL">Toutes</option></select>
+                    </div>
+                    <div>
+                        <label for="priorityFilter" class="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-0.5">Priorité</label>
+                        <select id="priorityFilter" onchange="rerenderMap()" class="w-full bg-white border border-slate-300 text-slate-800 text-xs rounded-lg p-1.5 font-medium outline-none focus:ring-2 focus:ring-sky-500"><option value="ALL">Toutes</option></select>
+                    </div>
+                </div>
+                <div class="relative">
+                    <i data-lucide="search" class="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2"></i>
+                    <input type="text" id="globalSearchInput" oninput="rerenderMap()" placeholder="Rechercher un numéro de voie, nom, commune..." class="w-full pl-8 pr-7 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:bg-white focus:ring-2 focus:ring-sky-500 outline-none">
+                    <button onclick="document.getElementById('globalSearchInput').value=''; rerenderMap();" class="absolute right-2.5 top-1.5 text-slate-400 hover:text-slate-600 text-xs" title="Effacer la recherche">✕</button>
+                </div>
+                <label class="flex items-center gap-2 text-[11px] text-slate-600 cursor-pointer"><input type="checkbox" id="viewportOnly" onchange="onViewportToggle()"> Limiter (statistiques et édition) à l'emprise visible de la carte</label>
             </div>
 
             <div id="chausseeViewsContainer" class="flex-1 overflow-y-auto p-3.5 space-y-4 custom-scrollbar">
@@ -163,10 +234,6 @@
                             <span class="text-[10px] text-slate-500">Technique retenue</span>
                         </label>
                     </div>
-                    <div class="bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-2">
-                        <label class="block text-[11px] font-bold text-slate-700">Filtrer par niveau de priorité :</label>
-                        <div class="grid grid-cols-2 gap-1.5" id="prioButtons"></div>
-                    </div>
                     <div class="bg-sky-900 text-white p-3 rounded-xl flex items-center justify-between">
                         <div>
                             <span class="text-[10px] uppercase tracking-wider text-sky-300 font-semibold block">Sélection filtrée</span>
@@ -179,19 +246,33 @@
                     </div>
                 </div>
 
-                <!-- Filtres communs à toutes les vues -->
-                <div class="pt-3 border-t border-slate-200 space-y-2">
-                    <div>
-                        <label class="block text-[11px] font-bold text-slate-700 mb-1">Commune :</label>
-                        <select id="communeFilter" onchange="rerenderMap(true)" class="w-full bg-white border border-slate-300 text-slate-800 text-xs rounded-lg p-2 font-medium outline-none">
-                            <option value="ALL">Toutes</option>
-                        </select>
+                <!-- Outil : statistiques -->
+                <div id="panel-stats" class="view-panel hidden space-y-3">
+                    <div class="flex items-start justify-between gap-2">
+                        <div class="min-w-0">
+                            <h2 class="text-xs font-bold uppercase tracking-wider text-slate-500">Statistiques</h2>
+                            <p id="statsScopeLabel" class="text-[11px] text-slate-500 mt-0.5"></p>
+                        </div>
+                        <span id="statsFormSwitch" class="seg shrink-0" role="group" aria-label="Forme du graphique"></span>
                     </div>
-                    <div class="relative">
-                        <i data-lucide="search" class="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5"></i>
-                        <input type="text" id="globalSearchInput" oninput="rerenderMap()" placeholder="Rechercher un numéro de voie, nom, commune..."
-                            class="w-full pl-8 pr-7 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:bg-white focus:ring-2 focus:ring-sky-500 outline-none">
-                        <button onclick="document.getElementById('globalSearchInput').value=''; rerenderMap();" class="absolute right-2.5 top-2 text-slate-400 hover:text-slate-600 text-xs" title="Effacer">✕</button>
+                    <div id="statsBody" class="stat-root space-y-3"></div>
+                </div>
+
+                <!-- Outil : édition des attributs -->
+                <div id="panel-edit" class="view-panel hidden space-y-3">
+                    <div>
+                        <h2 class="text-xs font-bold uppercase tracking-wider text-slate-500">Modifier les attributs</h2>
+                        <p class="text-[11px] text-slate-500 mt-0.5">Seuls les champs renseignés ci-dessous sont écrits ; « inchangé » laisse la table intacte.</p>
+                    </div>
+                    <div id="editReadOnly" class="hidden bg-rose-50 border border-rose-200 text-rose-800 rounded-xl p-3 text-xs"></div>
+                    <div id="editMissing" class="hidden bg-amber-50 border border-amber-200 text-amber-900 rounded-xl p-3 text-xs"></div>
+                    <div id="editTarget" class="bg-sky-50 border border-sky-200 rounded-xl p-3 space-y-1.5"></div>
+                    <button onclick="prefillWorksDone()" class="w-full text-left bg-white border border-slate-200 hover:bg-slate-50 rounded-xl p-2.5 text-xs"><b class="text-slate-800">Travaux réalisés : pré-remplir</b><br><span class="text-[11px] text-slate-500">Pathologies à 0, solution « Aucune », année en cours.</span></button>
+                    <div id="editForm" class="space-y-3"></div>
+                    <div id="editConfirm" class="hidden bg-sky-50 border border-sky-300 rounded-xl p-3 space-y-2"></div>
+                    <div class="flex flex-col gap-2 sticky bottom-0 bg-white/95 pt-2 pb-1">
+                        <button id="editApplyBtn" onclick="prepareEdit()" class="bg-sky-600 hover:bg-sky-700 text-white font-semibold px-3 py-2 rounded-lg text-xs">Appliquer…</button>
+                        <button id="editUndoBtn" onclick="undoLastEdit()" disabled class="opacity-50 bg-white border border-slate-300 text-slate-700 px-3 py-1.5 rounded-lg text-xs">Annuler la dernière modification</button>
                     </div>
                 </div>
             </div>
@@ -224,6 +305,8 @@
             </div>
         </main>
 
+        <div id="statTip" class="hidden stat-tip" role="tooltip"></div>
+
         <!-- Fiche d'identification (tiroir droit) -->
         <aside id="inspectorDrawer" class="hidden w-full sm:w-[360px] bg-white h-full z-[1006] border-l border-slate-200 shadow-2xl flex flex-col shrink-0 absolute right-0 top-0 transition-all">
             <div class="bg-slate-900 text-white p-3.5 flex items-start justify-between gap-2">
@@ -245,7 +328,7 @@
             <div class="grid grid-cols-5 bg-slate-100 border-b border-slate-200 p-1 gap-1" id="inspTabs"></div>
             <div id="inspectorContent" class="flex-1 overflow-y-auto p-3.5 space-y-2 custom-scrollbar text-xs"></div>
             <div class="p-2.5 bg-slate-50 border-t border-slate-200 flex items-center justify-between text-[11px] text-slate-500">
-                <span>Fiche segment</span>
+                <button onclick="editSelectedSegment()" class="text-slate-600 hover:text-sky-800 font-semibold flex items-center gap-1"><i data-lucide="pencil" class="w-3.5 h-3.5"></i> Éditer ce segment</button>
                 <button onclick="zoomToSelectedSegment()" class="text-sky-600 hover:text-sky-800 font-semibold flex items-center gap-1">
                     <i data-lucide="crosshair" class="w-3.5 h-3.5"></i> Zoomer sur le segment
                 </button>
@@ -285,32 +368,43 @@ const $ = id => document.getElementById(id);
 const GREY = '#94a3b8';
 const PALETTE = ['#2563eb', '#059669', '#d97706', '#7c3aed', '#db2777', '#0891b2', '#4f46e5'];
 
-// Pathologies du fichier : colonnes g_<clé> (gravité 0-2) et e_<clé> (étendue 0-2)
+// Pathologies de chaussée : colonnes g_<clé> (gravité 0-2) et e_<clé> (étendue 0-2)
 const PATHOS = [
     { k: 'def_surf', label: 'Défauts de surface' },
     { k: 'fiss',     label: 'Fissuration' },
     { k: 'rep',      label: 'Réparations' },
     { k: 'ndp',      label: 'Nids-de-poule' },
-    { k: 'def_c',    label: 'Déformations (def_c)' },
-    { k: 'def_r',    label: 'Déformations (def_r)' },
-    { k: 'tranchee', label: 'Tranchées' },
-    { k: 'sv',       label: 'Défauts SV (sv)' }
+    { k: 'def_c',    label: 'Déformations de chaussée' },
+    { k: 'def_r',    label: 'Déformations de rive' },
+    { k: 'tranchee', label: 'Tranchées' }
 ];
+// Relevés portés par la même table mais destinés à d'autres objets du réseau (modules à venir)
+const PATHOS_OTHER = [
+    { k: 'sv', label: 'Lisibilité de la signalisation verticale', obj: 'Signalisation verticale' },
+    { k: 'ep', label: 'Évacuation des eaux pluviales',            obj: 'Assainissement' }
+];
+const ALL_PATHOS = [...PATHOS, ...PATHOS_OTHER];
+const SOLUTIONS = ['Aucune', 'Entretien courant', 'ESU / MBCF', 'BB', 'Reprise structurelle / reprofilage'];
+const TECHNIQUES = SOLUTIONS.slice(1);
+const LEVELS_G = [{ v: 0, l: '0 · Aucune' }, { v: 1, l: '1 · Légère' }, { v: 2, l: '2 · Grave' }];
+const LEVELS_E = [{ v: 0, l: '0 · Nulle' }, { v: 1, l: '1 · Localisée' }, { v: 2, l: '2 · Généralisée' }];
+// Couleurs d'état (validées avec le script de la skill dataviz : bande de luminosité, séparation CVD, vision normale)
+const ST = { good: '#0ca30c', warn: '#eda100', orange: '#e0521a', crit: '#d03b3b', dark: '#9b1c1c', none: '#898781' };
 const GRAVE = {
-    'Absence de défauts':            { color: '#1fc24a', weight: 4 },
-    'Défauts légers et localisés':   { color: '#f4a340', weight: 5, dashArray: '8, 6' },
-    'Défauts légers et généralisés': { color: '#f4a340', weight: 5 },
-    'Défauts graves et localisés':   { color: '#c0121f', weight: 5.5, dashArray: '8, 6' },
-    'Défauts graves et généralisés': { color: '#c0121f', weight: 6 }
+    'Absence de défauts':            { color: ST.good, weight: 4 },
+    'Défauts légers et localisés':   { color: ST.warn, weight: 5, dashArray: '8, 6' },
+    'Défauts légers et généralisés': { color: ST.warn, weight: 5 },
+    'Défauts graves et localisés':   { color: ST.crit, weight: 5.5, dashArray: '8, 6' },
+    'Défauts graves et généralisés': { color: ST.crit, weight: 6 }
 };
 const INDIC = [
-    { v: 0, label: '0 · Bon état',       color: '#1fc24a' },
-    { v: 1, label: '1 · État moyen',     color: '#eab308' },
-    { v: 2, label: '2 · Dégradé',        color: '#f97316' },
-    { v: 3, label: '3 · Très dégradé',   color: '#c0121f' }
+    { v: 0, label: '0 · Bon état',     color: ST.good },
+    { v: 1, label: '1 · État moyen',   color: ST.warn },
+    { v: 2, label: '2 · Dégradé',      color: ST.orange },
+    { v: 3, label: '3 · Très dégradé', color: ST.dark }
 ];
 const DOMAN_COLORS = { 'VC RUES': '#f9a77a', 'VC PLACE': '#6cc24a', 'VC CHEMIN': '#6f6fcf', 'RD': '#e8d92a', 'CR': '#d6246e', 'À qualifier': '#8fd19e' };
-const SOLUTION_COLORS = { 'Aucune': '#1fc24a', 'Entretien courant': '#b9cdf2', 'ESU / MBCF': '#d6a91e', 'BB': '#e5600e', 'Reprise structurelle / reprofilage': '#5c1fbf' };
+const SOLUTION_COLORS = { 'Aucune': ST.good, 'Entretien courant': '#6da7ec', 'ESU / MBCF': ST.warn, 'BB': ST.orange, 'Reprise structurelle / reprofilage': '#6250d6' };
 const LEVEL_COLORS = { '1': '#0b1b86', '2': '#c8286f', '3': '#52d46a' };
 
 // Champs métier -> noms de colonnes candidats (insensible à la casse) : valeurs par défaut de l'assignation
@@ -331,16 +425,22 @@ const FIELDS = [
     { k: 'categorie',   g: 'Usage',          label: 'Catégorie de la voie',       c: ['Categorie', 'categorie', 'categorie_voie'] },
     { k: 'tonnage',     g: 'Usage',          label: 'Limitation tonnage / gabarit', c: ['Limitation_tonnage', 'limitation_tonnage', 'tonnage', 'gabarit'] },
     { k: 'securite',    g: 'Usage',          label: 'Enjeu de sécurité',          c: ['Enjeu_securite', 'enjeu_securite'] },
-    ...PATHOS.flatMap(p => [
-        { k: 'g_' + p.k, g: 'Pathologies', label: 'Gravité · ' + p.label,  c: ['G_' + p.k, 'g_' + p.k] },
-        { k: 'e_' + p.k, g: 'Pathologies', label: 'Étendue · ' + p.label,  c: ['E_' + p.k, 'e_' + p.k] }
-    ]),
-    { k: 'etat_surf',   g: 'État & programmation', label: 'Indicateur d\'état de surface',   c: ['Ind_etat_surface', 'ind_etat_sur'] },
-    { k: 'etat_struct', g: 'État & programmation', label: 'Indicateur d\'état de structure', c: ['Ind_etat_structure', 'ind_etat_str'] },
-    { k: 'prio',        g: 'État & programmation', label: 'Note de priorité',                c: ['Note_prio', 'Note_Prio', 'priorite', 'note_priorite'] },
-    { k: 'solution',    g: 'État & programmation', label: 'Solution de travaux',             c: ['Solution', 'Sol_Retenue', 'solution', 'travaux_prevus'] },
+    ...ALL_PATHOS.flatMap(p => {
+        const g = PATHOS_OTHER.includes(p) ? 'Autres relevés (SV / assainissement)' : 'Pathologies';
+        return [
+            { k: 'g_' + p.k, g, label: 'Gravité · ' + p.label, c: ['G_' + p.k, 'g_' + p.k], t: 'Int', kind: 'level', levels: LEVELS_G },
+            { k: 'e_' + p.k, g, label: 'Étendue · ' + p.label, c: ['E_' + p.k, 'e_' + p.k], t: 'Int', kind: 'level', levels: LEVELS_E }
+        ];
+    }),
+    { k: 'etat_surf',   g: 'État & programmation', label: 'Indicateur d\'état de surface',   c: ['Ind_etat_surface', 'ind_etat_sur'], t: 'Int', kind: 'level', levels: INDIC.map(i => ({ v: i.v, l: i.label })) },
+    { k: 'etat_struct', g: 'État & programmation', label: 'Indicateur d\'état de structure', c: ['Ind_etat_structure', 'ind_etat_str'], t: 'Int', kind: 'level', levels: INDIC.map(i => ({ v: i.v, l: i.label })) },
+    { k: 'prio',        g: 'État & programmation', label: 'Note de priorité',                c: ['Note_prio', 'Note_Prio', 'priorite', 'note_priorite'], t: 'Numeric', kind: 'number' },
+    { k: 'solution',    g: 'État & programmation', label: 'Solution de travaux préconisée',  c: ['Solution', 'Sol_Retenue', 'solution', 'travaux_prevus'], t: 'Choice', kind: 'choice', opts: SOLUTIONS },
     { k: 'annee_prog',  g: 'État & programmation', label: 'Année programmée',                c: ['Annee_prog', 'annee_prog'] },
-    { k: 'cout',        g: 'État & programmation', label: 'Estimation financière (€)',       c: ['Cout_estime', 'cout_estime'] }
+    { k: 'cout',        g: 'État & programmation', label: 'Estimation financière (€)',       c: ['Cout_estime', 'cout_estime'] },
+    { k: 'annee_travaux', g: 'Travaux réalisés',   label: 'Année de réalisation des travaux', c: ['Annee_travaux', 'annee_travaux', 'annee_derniers_travaux'], t: 'Int', kind: 'year' },
+    { k: 'technique',   g: 'Travaux réalisés',     label: 'Technique mise en œuvre',         c: ['Technique_realisee', 'technique_realisee', 'technique', 'technique_travaux'], t: 'Choice', kind: 'choice', opts: TECHNIQUES },
+    { k: 'date_releve', g: 'Relevé',               label: 'Année du relevé',                 c: ['Date_releve', 'date_relev', 'date_releve'], t: 'Text', kind: 'text' }
 ];
 const POLY_FIELDS = {
     sols:  [{ k: 'sol_type',   label: 'Type de sol support', c: ['type_sol', 'sol', 'nature', 'libelle'] },
@@ -395,6 +495,7 @@ let EV = null;                                    // évaluateur de style couran
 let currentObject = 'chaussee', currentViewTab = 'patrimoine';
 let currentPatrimoineMode = 'filaire', currentUsageMode = 'trafic', currentPathoMode = 'pathologie_individuelle', currentProgMode = 'prio';
 let currentPriorityFilter = 'ALL';
+let currentTool = 'carte', COLMAP = { chaussee: {}, sols: {}, aleas: {} }, LAST_EDIT = null, PENDING = null, statsForm = 'pie', statsUnit = 'km';
 let selectedFeature = null, selectedUid = null, currentInspectorTab = 'patrimoine';
 
 function defaultCfg() {
@@ -476,6 +577,11 @@ function registerTable(id, data, source, label) {
     return true;
 }
 
+function bboxOf(g) {
+    let a = 1e9, b = 1e9, c = -1e9, d = -1e9;
+    (function w(x) { if (typeof x[0] === 'number') { if (x[0] < a) a = x[0]; if (x[0] > c) c = x[0]; if (x[1] < b) b = x[1]; if (x[1] > d) d = x[1]; } else x.forEach(w); })(g.coordinates);
+    return a > c ? null : [a, b, c, d];
+}
 function buildFeatures(tableId, role) {
     const t = CACHE[tableId];
     if (!t) return [];
@@ -483,11 +589,12 @@ function buildFeatures(tableId, role) {
     const gcol = role === 'chaussee' ? (resolveCol(role, GEOM_FIELD, t.cols) || t.geomCol) : t.geomCol;
     const col = {};
     fields.forEach(f => { if (f.k !== 'geom') col[f.k] = resolveCol(role, f, t.cols); });
+    COLMAP[role] = col;
     const out = [];
     for (let i = 0; i < t.count; i++) {
         const geom = parseGeometry(t.data[gcol]?.[i]);
         if (!geom) continue;
-        const p = { _row: t.rowIds[i], _uid: role + i, _raw: {} };
+        const p = { _row: t.rowIds[i], _uid: role + i, _raw: {}, _bb: bboxOf(geom) };
         for (const k in col) if (col[k]) p[k] = t.data[col[k]][i];
         for (const c of t.cols) if (c !== gcol) p._raw[c] = t.data[c][i];
         out.push({ type: 'Feature', properties: p, geometry: geom });
@@ -512,10 +619,14 @@ function applyConfig(zoom) {
         r._table = id && CACHE[id] ? id : '';
     });
     updateCommuneFilter();
+    if (selectedUid) {                                       // la fiche ouverte pointe vers le nouvel objet issu de la table
+        selectedFeature = ASSIGNED.chaussee.find(f => uidOf(f) === selectedUid) || null;
+        if (selectedFeature) switchInspectorTab(currentInspectorTab); else closeInspector();
+    }
     rerenderMap();
     if (zoom) zoomToNetwork();
     $('assignedCountBadge').textContent = `${ROLES.filter(r => ASSIGNED[r.k].length).length}/3`;
-    updatePrioButtons();
+    updatePrioFilterOptions();
 }
 const tableOfRole = role => ROLES.find(r => r.k === role)._table || '';
 
@@ -608,13 +719,14 @@ function demoData() {
         ['VCR21', 'Rue des Écoles', 'VC RUES', 'Amplepuis', 260, 1, 1, 1, 'ESU / MBCF', 4.2, { fiss: P(1, 2) }, [[4.3860, 46.0702], [4.3830, 46.0690]]],
         ['VC?4B', '', 'À qualifier', 'Amplepuis', 190, null, 0, 0, 'Aucune', 2.0, {}, null]
     ];
-    const seg = { id: [], Pk: [], Num: [], Nom_voie: [], Classification: [], Commune: [], Longueur_m: [], Categorie: [], Ind_etat_surface: [], Ind_etat_structure: [], Solution: [], Note_prio: [], Geometrie: [] };
-    PATHOS.forEach(p => { seg['G_' + p.k] = []; seg['E_' + p.k] = []; });
+    const seg = { id: [], Pk: [], Num: [], Nom_voie: [], Classification: [], Commune: [], Longueur_m: [], Categorie: [], Ind_etat_surface: [], Ind_etat_structure: [], Solution: [], Note_prio: [], Annee_travaux: [], Technique_realisee: [], Date_releve: [], Geometrie: [] };
+    ALL_PATHOS.forEach(p => { seg['G_' + p.k] = []; seg['E_' + p.k] = []; });
     rows.forEach((r, i) => {
         seg.id.push(i + 1); seg.Pk.push(100 + i); seg.Num.push(r[0]); seg.Nom_voie.push(r[1]); seg.Classification.push(r[2]); seg.Commune.push(r[3]);
         seg.Longueur_m.push(r[4]); seg.Categorie.push(r[5]); seg.Ind_etat_surface.push(r[6]); seg.Ind_etat_structure.push(r[7]);
         seg.Solution.push(r[8]); seg.Note_prio.push(r[9]);
-        PATHOS.forEach(p => { const v = r[10][p.k]; seg['G_' + p.k].push(v ? v.g : 0); seg['E_' + p.k].push(v ? v.e : 0); });
+        seg.Annee_travaux.push(i === 2 ? 2021 : null); seg.Technique_realisee.push(i === 2 ? 'BB' : ''); seg.Date_releve.push('2024');
+        ALL_PATHOS.forEach(p => { const v = r[10][p.k]; seg['G_' + p.k].push(v ? v.g : 0); seg['E_' + p.k].push(v ? v.e : 0); });
         const c = r[11];
         // une ligne en GeoJSON, une en WKT (pour exercer les deux lecteurs), une sans géométrie
         seg.Geometrie.push(!c ? '' : i % 2 ? 'MULTILINESTRING ((' + c.map(p => p.join(' ')).join(', ') + '))' : JSON.stringify({ type: 'LineString', coordinates: c }));
@@ -660,12 +772,14 @@ function buildStaticUI() {
         `<button onclick="switchInspectorTab('${k}')" id="inspTab-${k}" class="insp-tab py-1.5 px-1 rounded-md text-[10px] font-medium text-slate-600 hover:text-slate-900">${l}</button>`).join('');
     switchNetworkObject('chaussee', true);
     switchViewTab('patrimoine', true);
-    updatePrioButtons();
+    updatePrioFilterOptions();
+    setTool('carte');
     icons();
 }
 
 function switchNetworkObject(k, silent) {
     currentObject = k;
+    if (k !== 'chaussee' && currentTool !== 'carte') setTool('carte');
     document.querySelectorAll('.obj-tab').forEach(b => { b.className = 'obj-tab px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-all text-slate-300 hover:text-white hover:bg-slate-800 shrink-0'; });
     $('objBtn-' + k).className = 'obj-tab px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all bg-sky-600 text-white shadow-sm shrink-0';
     $('activeObjectBadge').textContent = 'Objet : ' + OBJECTS[k][0];
@@ -673,6 +787,7 @@ function switchNetworkObject(k, silent) {
     $('chausseeViewsContainer').classList.toggle('hidden', !isCh);
     $('otherObjectPlaceholder').classList.toggle('hidden', isCh);
     if (!isCh) $('placeholderObjTitle').textContent = 'Module ' + OBJECTS[k][0];
+    applyToolVisibility();
     if (isCh && !silent) rerenderMap();
 }
 
@@ -682,6 +797,7 @@ function switchViewTab(k, silent) {
     $('viewTab-' + k).className = 'view-tab py-2 px-1 text-[11px] font-semibold border-b-2 border-sky-600 text-sky-700 bg-white rounded-t-lg flex flex-col items-center gap-1 transition-all';
     document.querySelectorAll('.view-panel').forEach(p => p.classList.add('hidden'));
     $('panel-' + k).classList.remove('hidden');
+    if (currentTool !== 'carte') { $('panel-' + k).classList.add('hidden'); $('panel-' + currentTool).classList.remove('hidden'); }
     if (selectedFeature) switchInspectorTab(k);
     if (!silent) rerenderMap();
 }
@@ -696,16 +812,6 @@ function selectRadioAndRender(name, val) {
     rerenderMap();
 }
 
-function updatePrioButtons() {
-    const { high, med } = CFG.prio;
-    const defs = [['ALL', 'Toutes', null], ['HIGH', `Prioritaire (≥ ${high})`, 'bg-rose-600'], ['MED', `Moyenne (${med} – ${high})`, 'bg-amber-500'], ['LOW', `Faible (< ${med})`, 'bg-emerald-500']];
-    $('prioButtons').innerHTML = defs.map(([k, l, dot]) => {
-        const on = currentPriorityFilter === k;
-        return `<button onclick="setPriorityFilter('${k}')" class="px-2.5 py-1.5 rounded-lg text-xs ${on ? 'font-semibold bg-sky-600 text-white shadow-sm' : 'font-medium bg-white border border-slate-200 text-slate-700 hover:bg-slate-100'} transition-all flex items-center justify-center gap-1.5">
-            ${dot ? `<span class="w-2 h-2 rounded-full ${dot}"></span>` : ''}${l}</button>`;
-    }).join('');
-}
-function setPriorityFilter(k) { currentPriorityFilter = k; updatePrioButtons(); rerenderMap(); }
 
 /* =========================================================================
    8. RENDU CARTOGRAPHIQUE
@@ -721,6 +827,7 @@ function initMap() {
     map.createPane('polygonsPane').style.zIndex = 350;
     map.createPane('roadsPane').style.zIndex = 450;
     map.createPane('nodesPane').style.zIndex = 500;
+    map.on('moveend', onMapMoved);
     roadRenderer = L.canvas({ pane: 'roadsPane', padding: 0.3 });     // rendu canvas : fluide avec plusieurs milliers de segments
 }
 
@@ -736,15 +843,12 @@ function prioClass(p) { return p >= CFG.prio.high ? 'HIGH' : p >= CFG.prio.med ?
 
 function visibleRoads() {
     const q = $('globalSearchInput').value.toLowerCase().trim();
-    const commune = $('communeFilter').value;
+    const commune = $('communeFilter').value, pf = $('priorityFilter').value;
     return ASSIGNED.chaussee.filter(f => {
         const p = f.properties;
         if (commune !== 'ALL' && p.commune !== commune) return false;
         if (q && !`${p.num || ''} ${p.nom_voie || ''} ${p.commune || ''} ${p.id ?? ''}`.toLowerCase().includes(q)) return false;
-        if (currentViewTab === 'programmation' && currentPriorityFilter !== 'ALL') {
-            const pr = parseFloat(p.prio);
-            if (isNaN(pr) || prioClass(pr) !== currentPriorityFilter) return false;
-        }
+        if (pf !== 'ALL') { const pr = parseFloat(p.prio); if (isNaN(pr) || prioClass(pr) !== pf) return false; }
         return true;
     });
 }
@@ -782,6 +886,7 @@ function rerenderMap(zoom) {
     }).addTo(map);
     if (currentViewTab === 'patrimoine' && currentPatrimoineMode === 'segments_noeuds') renderSegmentEndpoints(roads);
     updateDynamicLegend(EV);
+    refreshToolPanel();
     if (zoom) zoomToNetwork();
 }
 
@@ -904,7 +1009,7 @@ function buildStyleEvaluator(roads) {
     if (currentViewTab === 'programmation') {
         if (currentProgMode === 'prio') {
             const a = needed('prio', 'Note de priorité', 'Note de priorité absente'); if (a) return a;
-            const C = { HIGH: ['#dc2626', 6], MED: ['#f59e0b', 5], LOW: ['#10b981', 4.5] };
+            const C = { HIGH: [ST.crit, 6], MED: [ST.warn, 5], LOW: [ST.good, 4.5] };
             return { title: 'Note de priorité', items: [{ color: C.HIGH[0], label: `Prioritaire (≥ ${CFG.prio.high})` }, { color: C.MED[0], label: `Moyenne (${CFG.prio.med} – ${CFG.prio.high})` }, { color: C.LOW[0], label: `Faible (< ${CFG.prio.med})` }, { color: GREY, label: 'Non renseigné' }],
                      getStyle: f => { const v = parseFloat(f.properties.prio); if (isNaN(v)) return { color: GREY, weight: 4 }; const c = C[prioClass(v)]; return { color: c[0], weight: c[1] }; } };
         }
@@ -997,12 +1102,14 @@ function switchInspectorTab(k) {
         const s = ind(p.etat_surf), t = ind(p.etat_struct);
         const patho = PATHOS.map(x => { const l = glabel(p, x.k); return row(x.label, l, l ? GRAVE[l].color : null); }).join('');
         box.innerHTML = card('Indicateurs d\'état', row('État de surface', s[0], s[1]) + row('État de structure', t[0], t[1])) +
-                        card('Relevé des pathologies', patho);
+                        card('Relevé des pathologies', patho) +
+                        card('Autres relevés (SV / assainissement)', PATHOS_OTHER.map(x => { const l = glabel(p, x.k); return row(x.label, l, l ? GRAVE[l].color : null); }).join(''));
     } else if (k === 'programmation') {
-        const pr = parseFloat(p.prio), col = isNaN(pr) ? null : { HIGH: '#dc2626', MED: '#f59e0b', LOW: '#10b981' }[prioClass(pr)];
+        const pr = parseFloat(p.prio), col = isNaN(pr) ? null : { HIGH: ST.crit, MED: ST.warn, LOW: ST.good }[prioClass(pr)];
         box.innerHTML = card('Programmation & travaux',
             row('Note de priorité', filled(p.prio) ? Number(p.prio).toFixed(2) : null, col) + row('Solution de travaux', p.solution) +
-            row('Année programmée', p.annee_prog) + row('Estimation financière', withUnit(p.cout, '€')));
+            row('Année programmée', p.annee_prog) + row('Estimation financière', withUnit(p.cout, '€'))) +
+            card('Travaux réalisés', row('Année de réalisation', Number(p.annee_travaux) > 0 ? p.annee_travaux : null) + row('Technique mise en œuvre', p.technique));
     } else {
         const raw = Object.entries(p._raw).sort(([a], [b]) => a.localeCompare(b));
         box.innerHTML = card('Toutes les colonnes de la table', raw.map(([c, v]) => row(esc(c), v)).join(''));
@@ -1028,6 +1135,497 @@ function showToast(msg) {
     $('toastMessage').textContent = msg;
     const t = $('toastNotification'); t.classList.remove('hidden');
     clearTimeout(showToast._t); showToast._t = setTimeout(() => t.classList.add('hidden'), 4000);
+}
+
+/* =========================================================================
+   10b. OUTILS : CARTE / STATISTIQUES / ÉDITION ET ÉTENDUE DE TRAVAIL
+   ========================================================================= */
+const FIELD_BY_KEY = Object.fromEntries(FIELDS.map(f => [f.k, f]));
+
+function applyToolVisibility() {
+    const isCh = currentObject === 'chaussee';
+    $('toolSwitch').classList.toggle('hidden', !isCh);
+    $('scopeBar').classList.toggle('hidden', !isCh);
+    $('viewTabs').classList.toggle('hidden', !isCh || currentTool !== 'carte');
+}
+
+function setTool(t) {
+    currentTool = t;
+    ['carte', 'stats', 'edit'].forEach(k => {
+        $('toolBtn-' + k).className = 'tool-btn py-1.5 rounded-lg text-[11px] font-semibold flex items-center justify-center gap-1.5 transition-all ' +
+            (k === t ? 'bg-white text-sky-700 shadow-sm' : 'text-slate-600 hover:text-slate-900');
+    });
+    document.querySelectorAll('.view-panel').forEach(p => p.classList.add('hidden'));
+    if (t === 'carte') $('panel-' + currentViewTab).classList.remove('hidden');
+    $('panel-stats').classList.toggle('hidden', t !== 'stats');
+    $('panel-edit').classList.toggle('hidden', t !== 'edit');
+    const sb = $('leftSidebar');
+    sb.classList.remove('sm:w-[370px]', 'sm:w-[430px]', 'sm:w-[580px]');
+    sb.classList.add(t === 'stats' ? 'sm:w-[580px]' : t === 'edit' ? 'sm:w-[430px]' : 'sm:w-[370px]');
+    applyToolVisibility();
+    if (t === 'stats') renderStats();
+    if (t === 'edit') { renderEditForm(); updateEditTarget(); }
+    setTimeout(() => map && map.invalidateSize(), 250);
+}
+
+/* ---- Étendue de travail : segments filtrés (commune, priorité, recherche) et, en option, emprise de la carte ---- */
+function scopeRoads() {
+    const roads = visibleRoads();
+    if (!$('viewportOnly').checked || !map) return roads;
+    const b = map.getBounds(), w = b.getWest(), s = b.getSouth(), e = b.getEast(), n = b.getNorth();
+    return roads.filter(f => { const k = f.properties._bb; return k && k[0] <= e && k[2] >= w && k[1] <= n && k[3] >= s; });
+}
+function scopeLabel() {
+    const parts = [];
+    const c = $('communeFilter').value;
+    parts.push(c === 'ALL' ? 'Toutes les communes' : c);
+    const pf = $('priorityFilter');
+    if (pf.value !== 'ALL') parts.push(pf.selectedOptions[0].text);
+    const q = $('globalSearchInput').value.trim();
+    if (q) parts.push('« ' + q + ' »');
+    if ($('viewportOnly').checked) parts.push('emprise de la carte');
+    return parts.join(' · ');
+}
+let toolTimer = null;
+function toolSignature() { return FIELDS.filter(f => f.kind).map(f => colOfKey(f.k) ? 1 : 0).join('') + editReadOnlyReason(); }
+function refreshToolPanel() {
+    if (currentTool === 'stats') renderStats();
+    else if (currentTool === 'edit') { if (toolSignature() !== editSig) renderEditForm(); updateEditTarget(); }
+}
+function onMapMoved() {
+    if (!$('viewportOnly').checked || currentTool === 'carte') return;
+    clearTimeout(toolTimer); toolTimer = setTimeout(refreshToolPanel, 250);
+}
+function onViewportToggle() { refreshToolPanel(); }
+
+function updatePrioFilterOptions() {
+    const sel = $('priorityFilter'), prev = sel.value, { high, med } = CFG.prio;
+    sel.innerHTML = [['ALL', 'Toutes'], ['HIGH', `Prioritaire (≥ ${high})`], ['MED', `Moyenne (${med} – ${high})`], ['LOW', `Faible (< ${med})`]]
+        .map(([v, l]) => `<option value="${v}">${l}</option>`).join('');
+    sel.value = prev || 'ALL';
+}
+
+/* =========================================================================
+   10c. ÉDITION DES ATTRIBUTS (écriture dans la table Grist)
+   ========================================================================= */
+let editTargetMode = 'scope', editSig = '', editBusy = false;
+const EDIT_GROUPS = [
+    { title: 'Travaux réalisés', keys: ['annee_travaux', 'technique'] },
+    { title: 'État de la section', keys: ['etat_surf', 'etat_struct'] },
+    { title: 'Pathologies relevées', patho: PATHOS },
+    { title: 'Solution de travaux préconisée', keys: ['solution', 'prio'] },
+    { title: 'Relevé', keys: ['date_releve'] },
+    { title: 'Autres relevés (objets signalisation verticale et assainissement)', patho: PATHOS_OTHER, collapsed: true }
+];
+
+function colOfKey(k) { return COLMAP.chaussee[k] || ''; }
+function editReadOnlyReason() {
+    const id = tableOfRole('chaussee');
+    if (!id || !CACHE[id]) return 'Aucune table de segments assignée : ouvrez « Tables & champs ».';
+    if (CACHE[id].source === 'file') return 'La table assignée provient d\'un fichier GeoJSON importé dans le widget : elle ne peut pas être modifiée.';
+    return '';
+}
+function choicesFor(f) {
+    const extra = new Set();
+    ASSIGNED.chaussee.forEach(x => { const v = x.properties[f.k]; if (filled(v)) extra.add(String(v)); });
+    return [...new Set([...(f.opts || []), ...extra])];
+}
+const clearValue = f => (f.t === 'Text' || f.t === 'Choice') ? '' : null;
+
+function editControl(f) {
+    const dis = colOfKey(f.k) ? '' : 'disabled';
+    const base = 'w-full bg-white border border-slate-300 rounded-lg p-1.5 text-xs outline-none focus:ring-2 focus:ring-sky-500 disabled:bg-slate-100 disabled:text-slate-400';
+    if (f.kind === 'level' || f.kind === 'choice') {
+        const opts = f.kind === 'level' ? f.levels.map(o => `<option value="${o.v}">${esc(o.l)}</option>`)
+                                         : choicesFor(f).map(o => `<option value="${esc(o)}">${esc(o)}</option>`);
+        return `<select data-ek="${f.k}" ${dis} class="${base}"><option value="">— inchangé —</option>${opts.join('')}<option value="__clear__">∅ Effacer</option></select>`;
+    }
+    const type = f.kind === 'text' ? 'text' : 'number';
+    const attrs = f.kind === 'year' ? 'min="1900" max="2100" step="1"' : f.kind === 'number' ? 'min="0" step="0.1"' : '';
+    return `<div class="flex gap-1"><input data-ek="${f.k}" type="${type}" ${attrs} placeholder="inchangé" ${dis} class="${base}">
+        <button type="button" data-clear-for="${f.k}" ${dis} onclick="toggleClear('${f.k}')" class="shrink-0 px-2 rounded-lg border border-slate-300 bg-white text-slate-500 hover:bg-slate-100 text-xs disabled:opacity-40" title="Effacer la valeur dans la table">∅</button></div>`;
+}
+function toggleClear(k) {
+    const inp = document.querySelector(`#editForm input[data-ek="${k}"]`), btn = document.querySelector(`#editForm [data-clear-for="${k}"]`);
+    if (!inp) return;
+    const on = inp.dataset.clear !== '1';
+    inp.dataset.clear = on ? '1' : ''; inp.disabled = on; if (on) inp.value = '';
+    btn.classList.toggle('bg-rose-100', on); btn.classList.toggle('text-rose-700', on);
+}
+
+function renderEditForm() {
+    const why = editReadOnlyReason();
+    const ro = $('editReadOnly'); ro.classList.toggle('hidden', !why); ro.textContent = why;
+    const missing = why ? [] : FIELDS.filter(f => f.kind && !colOfKey(f.k));
+    const mb = $('editMissing');
+    mb.classList.toggle('hidden', !missing.length);
+    if (missing.length) {
+        mb.innerHTML = `<div class="font-semibold mb-1">${missing.length} champ${missing.length > 1 ? 's' : ''} sans colonne dans la table</div>
+            <div class="text-amber-800 mb-2 leading-relaxed">${esc(missing.map(f => f.label).join(' · '))}</div>
+            <button onclick="createMissingColumns()" class="bg-amber-600 hover:bg-amber-700 text-white font-semibold px-3 py-1.5 rounded-lg text-xs">Créer les colonnes manquantes dans Grist</button>`;
+    }
+    const field = f => `<div class="space-y-1"><label class="block text-[11px] font-semibold text-slate-600">${esc(f.label)}</label>${editControl(f)}</div>`;
+    const pathoRows = list => `<div class="grid grid-cols-[1.2fr_1fr_1fr] gap-2 text-[10px] font-bold uppercase tracking-wider text-slate-400 pb-1"><span>Pathologie</span><span>Gravité</span><span>Étendue</span></div>` +
+        list.map(p => `<div class="grid grid-cols-[1.2fr_1fr_1fr] gap-2 items-center py-1 border-t border-slate-100"><span class="text-[11px] font-medium text-slate-700 leading-tight">${esc(p.label)}</span>${editControl(FIELD_BY_KEY['g_' + p.k])}${editControl(FIELD_BY_KEY['e_' + p.k])}</div>`).join('');
+    $('editForm').innerHTML = EDIT_GROUPS.map(g => {
+        const body = g.patho ? pathoRows(g.patho) : `<div class="grid grid-cols-2 gap-2.5">${g.keys.map(k => field(FIELD_BY_KEY[k])).join('')}</div>`;
+        return g.collapsed
+            ? `<details class="bg-white rounded-xl border border-slate-200 p-3"><summary class="text-[11px] font-bold uppercase tracking-wider text-slate-500 cursor-pointer">${esc(g.title)}</summary><div class="pt-2">${body}</div></details>`
+            : `<section class="bg-white rounded-xl border border-slate-200 p-3 space-y-2"><h3 class="text-[11px] font-bold uppercase tracking-wider text-sky-700">${esc(g.title)}</h3>${body}</section>`;
+    }).join('');
+    editSig = toolSignature();
+    cancelEdit();
+}
+
+function setEditTarget(v) { editTargetMode = v; updateEditTarget(); }
+function updateEditTarget() {
+    const roads = scopeRoads(), km = roads.reduce((a, f) => a + KM(f), 0), sel = selectedFeature;
+    if (editTargetMode === 'selection' && !sel) editTargetMode = 'scope';
+    const n = getEditFeatures().length;
+    $('editTarget').innerHTML = `
+        <div class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Segments concernés</div>
+        <label class="flex items-start gap-2 cursor-pointer text-xs"><input type="radio" name="editTarget" value="scope" ${editTargetMode === 'scope' ? 'checked' : ''} onchange="setEditTarget('scope')" class="mt-0.5">
+            <span><b>Tous les segments visibles</b> : ${roads.length} segment${roads.length > 1 ? 's' : ''} · ${fmtKm(km)}<br><span class="text-[11px] text-slate-500">${esc(scopeLabel())}</span></span></label>
+        <label class="flex items-start gap-2 text-xs ${sel ? 'cursor-pointer' : 'opacity-50'}"><input type="radio" name="editTarget" value="selection" ${editTargetMode === 'selection' ? 'checked' : ''} ${sel ? '' : 'disabled'} onchange="setEditTarget('selection')" class="mt-0.5">
+            <span><b>Segment sélectionné</b> ${sel ? ': ' + esc(sel.properties.num || '') + ' (n° ' + esc(sel.properties.id ?? sel.properties._row) + ')' : ': cliquez sur un segment de la carte'}</span></label>`;
+    $('editApplyBtn').textContent = `Appliquer à ${n} segment${n > 1 ? 's' : ''}…`;
+}
+function getEditFeatures() { return (editTargetMode === 'selection' && selectedFeature) ? [selectedFeature] : scopeRoads(); }
+function editSelectedSegment() { if (!selectedFeature) return; editTargetMode = 'selection'; setTool('edit'); }
+
+function collectEdits() {
+    const edits = {}, errors = [];
+    document.querySelectorAll('#editForm [data-ek]').forEach(el => {
+        const k = el.dataset.ek, f = FIELD_BY_KEY[k];
+        if (!colOfKey(k)) return;
+        if (el.dataset.clear === '1') { edits[k] = clearValue(f); return; }
+        let v = el.value.trim();
+        if (v === '') return;
+        if (v === '__clear__') { edits[k] = clearValue(f); return; }
+        if (f.kind === 'level') edits[k] = Number(v);
+        else if (f.kind === 'year') { const n = parseInt(v, 10); if (!(n >= 1900 && n <= 2100)) errors.push(`${f.label} : année invalide (1900 à 2100)`); else edits[k] = n; }
+        else if (f.kind === 'number') { const n = parseFloat(v); if (isNaN(n) || n < 0) errors.push(`${f.label} : nombre positif attendu`); else edits[k] = n; }
+        else edits[k] = v;
+    });
+    return { edits, errors };
+}
+function describeEdit(k, v) {
+    const f = FIELD_BY_KEY[k];
+    if (v === null || v === '') return '<i>valeur effacée</i>';
+    if (f.kind === 'level') return esc((f.levels.find(o => o.v === v) || { l: v }).l);
+    return esc(String(v));
+}
+
+function prepareEdit() {
+    const why = editReadOnlyReason();
+    if (why) return showToast(why);
+    const { edits, errors } = collectEdits();
+    if (errors.length) return showToast(errors[0]);
+    const keys = Object.keys(edits);
+    if (!keys.length) return showToast('Aucune modification saisie.');
+    const feats = getEditFeatures();
+    if (!feats.length) return showToast('Aucun segment concerné.');
+    PENDING = { edits, feats };
+    const km = feats.reduce((a, f) => a + KM(f), 0);
+    $('editConfirm').classList.remove('hidden');
+    $('editConfirm').innerHTML = `
+        <div class="font-semibold text-sky-900 text-xs">Confirmer la modification de ${feats.length} segment${feats.length > 1 ? 's' : ''} (${fmtKm(km)}) ?</div>
+        <ul class="text-[11px] text-slate-700 space-y-0.5 max-h-40 overflow-y-auto">${keys.map(k => `<li>• ${esc(FIELD_BY_KEY[k].label)} → <b>${describeEdit(k, edits[k])}</b></li>`).join('')}</ul>
+        <p class="text-[11px] text-slate-500">Les autres colonnes ne sont pas touchées. Vous pourrez annuler cette modification juste après.</p>
+        <div class="flex gap-2"><button id="editConfirmBtn" onclick="confirmEdit()" class="bg-sky-600 hover:bg-sky-700 text-white font-semibold px-3 py-1.5 rounded-lg text-xs">Confirmer l'écriture dans la table</button>
+        <button onclick="cancelEdit()" class="bg-white border border-slate-300 text-slate-700 px-3 py-1.5 rounded-lg text-xs">Annuler</button></div>`;
+    $('editConfirm').scrollIntoView({ block: 'nearest' });
+}
+function cancelEdit() { PENDING = null; const c = $('editConfirm'); if (c) { c.classList.add('hidden'); c.innerHTML = ''; } }
+
+function setEditBusy(b) {
+    editBusy = b;
+    ['editApplyBtn', 'editUndoBtn', 'editConfirmBtn'].forEach(id => { const el = $(id); if (el) { el.disabled = b || (id === 'editUndoBtn' && !LAST_EDIT); el.classList.toggle('opacity-50', el.disabled); } });
+}
+function updateUndoButton() {
+    const b = $('editUndoBtn');
+    b.disabled = !LAST_EDIT; b.classList.toggle('opacity-50', !LAST_EDIT);
+    b.textContent = LAST_EDIT ? `Annuler la dernière modification (${LAST_EDIT.rowIds.length} segments)` : 'Annuler la dernière modification';
+}
+
+// Envoie { colonne: [valeurs] } pour les lignes rowIds ; Grist : une seule transaction (BulkUpdateRecord par lots)
+async function sendUpdate(tid, rowIds, colVals) {
+    const t = CACHE[tid];
+    if (t.source === 'grist') {
+        const actions = [];
+        for (let i = 0; i < rowIds.length; i += BATCH_WRITE) {
+            const part = {};
+            for (const c in colVals) part[c] = colVals[c].slice(i, i + BATCH_WRITE);
+            actions.push(['BulkUpdateRecord', tid, rowIds.slice(i, i + BATCH_WRITE), part]);
+        }
+        await grist.docApi.applyUserActions(actions, { desc: 'Mise à jour depuis le widget SIG Voirie' });
+        registerTable(tid, await grist.docApi.fetchTable(tid), 'grist');
+    } else {
+        const idx = new Map(t.rowIds.map((r, i) => [r, i]));
+        for (const c in colVals) rowIds.forEach((r, j) => { t.data[c][idx.get(r)] = colVals[c][j]; });
+    }
+    applyConfig(false);
+}
+const BATCH_WRITE = 500;
+
+async function writeEdits({ edits, feats }) {
+    const tid = tableOfRole('chaussee'), keys = Object.keys(edits);
+    const rowIds = feats.map(f => f.properties._row);
+    const upd = {}, old = {};
+    keys.forEach(k => {
+        const c = colOfKey(k);
+        upd[c] = rowIds.map(() => edits[k]);
+        old[c] = feats.map(f => (f.properties[k] === undefined ? null : f.properties[k]));
+    });
+    await sendUpdate(tid, rowIds, upd);
+    LAST_EDIT = { tid, rowIds, old };
+    return rowIds.length;
+}
+async function confirmEdit() {
+    if (!PENDING || editBusy) return;
+    setEditBusy(true);
+    try {
+        const n = await writeEdits(PENDING);
+        cancelEdit();
+        renderEditForm();
+        showToast(`${n} segment${n > 1 ? 's' : ''} mis à jour dans la table.`);
+    } catch (e) {
+        console.error(e);
+        showToast('Écriture impossible : ' + ((e && e.message) ? e.message : e) + ' (droits d\'accès ?)');
+    } finally { setEditBusy(false); updateUndoButton(); }
+}
+async function undoLastEdit() {
+    if (!LAST_EDIT || editBusy) return;
+    setEditBusy(true);
+    try {
+        await sendUpdate(LAST_EDIT.tid, LAST_EDIT.rowIds, LAST_EDIT.old);
+        showToast('Dernière modification annulée.');
+        LAST_EDIT = null;
+    } catch (e) { showToast('Annulation impossible : ' + ((e && e.message) ? e.message : e)); }
+    finally { setEditBusy(false); updateUndoButton(); }
+}
+
+async function createMissingColumns() {
+    const tid = tableOfRole('chaussee');
+    const missing = FIELDS.filter(f => f.kind && !colOfKey(f.k));
+    if (!tid || !missing.length || editBusy) return;
+    setEditBusy(true);
+    try {
+        if (CACHE[tid].source === 'grist') {
+            const actions = missing.map(f => {
+                const info = { type: f.t, isFormula: false };
+                if (f.t === 'Choice') info.widgetOptions = JSON.stringify({ choices: f.opts || [] });
+                return ['AddColumn', tid, f.c[0], info];
+            });
+            await grist.docApi.applyUserActions(actions, { desc: 'Ajout des colonnes d\'édition (widget SIG Voirie)' });
+            registerTable(tid, await grist.docApi.fetchTable(tid), 'grist');
+        } else {
+            const t = CACHE[tid];
+            missing.forEach(f => { t.data[f.c[0]] = Array(t.count).fill(clearValue(f)); if (!t.cols.includes(f.c[0])) t.cols.push(f.c[0]); });
+        }
+        missing.forEach(f => { CFG.map.chaussee[f.k] = f.c[0]; });
+        saveCfg();
+        applyConfig(false);
+        renderEditForm();
+        showToast(`${missing.length} colonne${missing.length > 1 ? 's' : ''} créée${missing.length > 1 ? 's' : ''}.`);
+    } catch (e) { console.error(e); showToast('Création impossible : ' + ((e && e.message) ? e.message : e)); }
+    finally { setEditBusy(false); updateUndoButton(); }
+}
+
+function setCtl(k, v) { const el = document.querySelector(`#editForm [data-ek="${k}"]`); if (el && !el.disabled) el.value = String(v); }
+function prefillWorksDone() {
+    PATHOS.forEach(p => { setCtl('g_' + p.k, 0); setCtl('e_' + p.k, 0); });
+    setCtl('solution', 'Aucune');
+    setCtl('annee_travaux', new Date().getFullYear());
+    showToast('Formulaire pré-rempli (pathologies à 0, solution « Aucune ») : vérifiez avant d\'appliquer.');
+}
+
+/* =========================================================================
+   10d. STATISTIQUES (SVG sans dépendance, calculées sur l'étendue de travail)
+   ========================================================================= */
+const KM = f => (parseFloat(f.properties.longueur) || 0) / 1000;
+const fmtNum = (v, d = 1) => v.toLocaleString('fr-FR', { minimumFractionDigits: d, maximumFractionDigits: d });
+const fmtKm = v => fmtNum(v) + ' km';
+const fmtPct = v => fmtNum(v) + ' %';
+const HCLASSES = [
+    { id: 'll', label: 'Légers · localisés',   color: ST.warn, hatch: 'hatch-warn' },
+    { id: 'lg', label: 'Légers · généralisés', color: ST.warn },
+    { id: 'gl', label: 'Graves · localisés',   color: ST.crit, hatch: 'hatch-crit' },
+    { id: 'gg', label: 'Graves · généralisés', color: ST.crit }
+];
+const GLABEL_TO_HCLASS = { 'Défauts légers et localisés': 'll', 'Défauts légers et généralisés': 'lg', 'Défauts graves et localisés': 'gl', 'Défauts graves et généralisés': 'gg' };
+const NR = { id: '__nr', label: 'Non renseigné', color: ST.none };
+
+function tally(roads, defs, keyFn) {
+    const m = new Map(defs.map(d => [d.id, { ...d, km: 0, n: 0 }]));
+    roads.forEach(f => {
+        const id = keyFn(f.properties);
+        let e = m.get(id);
+        if (!e) { e = { id, label: String(id), color: ST.none, km: 0, n: 0 }; m.set(id, e); }
+        e.km += KM(f); e.n++;
+    });
+    return [...m.values()];
+}
+function textOn(hex) {                                  // texte posé sur une couleur : sombre sur fond clair, blanc sinon
+    const c = [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16) / 255).map(v => v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4));
+    return (0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]) > 0.3 ? '#0b0b0b' : '#ffffff';
+}
+const tipAttrs = (name, val, color) => `data-name="${esc(name)}" data-val="${esc(val)}" data-color="${esc(color)}" tabindex="0"`;
+
+function arcPath(cx, cy, R, r, a0, a1) {
+    const P = (rad, a) => [cx + rad * Math.cos(a), cy + rad * Math.sin(a)];
+    const [x0, y0] = P(R, a0), [x1, y1] = P(R, a1), [x2, y2] = P(r, a1), [x3, y3] = P(r, a0), lg = (a1 - a0) > Math.PI ? 1 : 0;
+    return `M${x0.toFixed(2)} ${y0.toFixed(2)}A${R} ${R} 0 ${lg} 1 ${x1.toFixed(2)} ${y1.toFixed(2)}L${x2.toFixed(2)} ${y2.toFixed(2)}A${r} ${r} 0 ${lg} 0 ${x3.toFixed(2)} ${y3.toFixed(2)}Z`;
+}
+function pieSvg(slices, total, title) {
+    const size = 168, R = size / 2 - 1, r = R * 0.56, cx = size / 2, cy = size / 2;
+    const nz = slices.filter(s => s.km > 0);
+    let a0 = -Math.PI / 2, paths = '', labels = '';
+    nz.forEach(s => {
+        const share = s.km / total, a1 = a0 + 2 * Math.PI * share;
+        const tip = tipAttrs(s.label, `${fmtKm(s.km)} · ${fmtPct(share * 100)}`, s.color);
+        if (nz.length === 1) {
+            paths += `<path class="stat-mark" ${tip} d="M${cx - R} ${cy}a${R} ${R} 0 1 0 ${2 * R} 0a${R} ${R} 0 1 0 ${-2 * R} 0ZM${cx - r} ${cy}a${r} ${r} 0 1 1 ${2 * r} 0a${r} ${r} 0 1 1 ${-2 * r} 0Z" fill="${s.color}" fill-rule="evenodd"/>`;
+        } else {
+            paths += `<path class="stat-mark" ${tip} d="${arcPath(cx, cy, R, r, a0, a1)}" fill="${s.color}" stroke="#fcfcfb" stroke-width="2"/>`;
+            if (share >= 0.1) {                                    // pourcentage dans la part, seulement si elle est assez large
+                const am = (a0 + a1) / 2, rm = (R + r) / 2;
+                labels += `<text x="${(cx + rm * Math.cos(am)).toFixed(1)}" y="${(cy + rm * Math.sin(am) + 3.5).toFixed(1)}" text-anchor="middle" font-size="10.5" font-weight="600" fill="${textOn(s.color)}" pointer-events="none">${Math.round(share * 100)}%</text>`;
+            }
+        }
+        a0 = a1;
+    });
+    return `<svg class="stat-pie" viewBox="0 0 ${size} ${size}" width="${size}" height="${size}" role="img" aria-label="${esc(title)}">${paths}${labels}
+        <text x="${cx}" y="${cy - 1}" text-anchor="middle" font-size="15" font-weight="600" fill="#0b0b0b">${fmtNum(total)}</text>
+        <text x="${cx}" y="${cy + 13}" text-anchor="middle" font-size="10" fill="#52514e">km</text></svg>`;
+}
+function legendHtml(slices, total) {
+    return `<ul class="stat-legend">` + slices.filter(s => s.km > 0).map(s =>
+        `<li><span class="sw" style="background:${s.color}"></span><span>${esc(s.label)}</span><span class="val">${fmtKm(s.km)}</span><span class="pct">${fmtPct(100 * s.km / total)}</span></li>`).join('') + `</ul>`;
+}
+function barsHtml(slices, total) {
+    const max = Math.max(...slices.map(s => s.km), 0.0001);
+    return `<div class="stat-bars">` + slices.filter(s => s.km > 0).map(s => {
+        const tip = tipAttrs(s.label, `${fmtKm(s.km)} · ${fmtPct(100 * s.km / total)}`, s.color);
+        return `<div class="brow" ${tip}><span class="bl">${esc(s.label)}</span><span class="btrack"><span class="bfill" style="width:${(100 * s.km / max).toFixed(1)}%;background:${s.color}"></span></span><span class="bv">${fmtKm(s.km)}</span></div>`;
+    }).join('') + `</div>`;
+}
+function tableHtml(slices, total) {
+    return `<table class="stat-table"><thead><tr><th>Classe</th><th>Segments</th><th>Linéaire</th><th>Part</th></tr></thead><tbody>` +
+        slices.map(s => `<tr><td><span class="sw" style="background:${s.color}"></span> ${esc(s.label)}</td><td>${s.n}</td><td>${fmtKm(s.km)}</td><td>${fmtPct(total ? 100 * s.km / total : 0)}</td></tr>`).join('') +
+        `<tr class="tot"><td>Total</td><td>${slices.reduce((a, s) => a + s.n, 0)}</td><td>${fmtKm(total)}</td><td>100 %</td></tr></tbody></table>`;
+}
+function partCard(title, sub, slices, total) {
+    const known = slices.filter(s => s.id !== '__nr').reduce((a, s) => a + s.km, 0);
+    let body;
+    if (!total) body = '<p class="stat-empty">Aucun segment dans la sélection.</p>';
+    else if (statsForm === 'table') body = tableHtml(slices, total);
+    else if (statsForm === 'bars') body = barsHtml(slices, total);
+    else body = `<div class="stat-row"><div class="stat-chart">${pieSvg(slices, total, title)}</div>${legendHtml(slices, total)}</div>`;
+    const warn = total && !known ? '<p class="stat-note">Donnée non renseignée pour cette sélection.</p>' : '';
+    return `<figure class="stat-card"><figcaption><span class="stat-title">${esc(title)}</span><span class="stat-sub">${esc(sub)}</span></figcaption>${warn}${body}</figure>`;
+}
+
+function niceStep(max) {
+    const raw = max / 4, p = Math.pow(10, Math.floor(Math.log10(raw || 1))), n = raw / p;
+    return (n <= 1 ? 1 : n <= 2 ? 2 : n <= 5 ? 5 : 10) * p;
+}
+function barEndPath(x, y, w, h, last) {                  // extrémité de donnée arrondie (4 px) sur le dernier segment, base droite
+    const rr = last ? Math.min(4, w / 2, h / 2) : 0;
+    return `M${x} ${y}H${x + w - rr}${rr ? `Q${x + w} ${y} ${x + w} ${y + rr}V${y + h - rr}Q${x + w} ${y + h} ${x + w - rr} ${y + h}` : `V${y + h}`}H${x}Z`;
+}
+function histoData(roads) {
+    return PATHOS.map(p => {
+        const segs = HCLASSES.map(c => ({ ...c, km: 0, n: 0 }));
+        roads.forEach(f => { const id = GLABEL_TO_HCLASS[glabel(f.properties, p.k)]; if (id) { const s = segs.find(x => x.id === id); s.km += KM(f); s.n++; } });
+        return { p, segs, total: segs.reduce((a, s) => a + s.km, 0) };
+    });
+}
+function histoSvg(rows, scopeKm) {
+    const W = 540, labelW = 160, right = 74, rowH = 30, barH = 18, top = 6, axisH = 24, plotW = W - labelW - right;
+    const val = km => statsUnit === 'pct' ? (scopeKm ? 100 * km / scopeKm : 0) : km;
+    const max = Math.max(...rows.map(r => val(r.total)), 0.0001), step = niceStep(max), top_ = Math.ceil(max / step) * step;
+    const sx = v => labelW + plotW * v / top_, H = top + rows.length * rowH + axisH;
+    let g = `<defs>${HCLASSES.filter(c => c.hatch).map(c => `<pattern id="${c.hatch}" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="6" height="6" fill="${c.color}"/><rect width="2.4" height="6" fill="#fcfcfb"/></pattern>`).join('')}</defs>`;
+    for (let t = 0; t <= top_ + 1e-9; t += step) {
+        const x = sx(t);
+        g += `<line x1="${x}" x2="${x}" y1="${top}" y2="${H - axisH}" stroke="#e1e0d9" stroke-width="1"/><text x="${x}" y="${H - 7}" text-anchor="middle" font-size="10" fill="#898781">${fmtNum(t, step < 1 ? 1 : 0)}${statsUnit === 'pct' ? ' %' : ''}</text>`;
+    }
+    g += `<line x1="${labelW}" x2="${labelW}" y1="${top}" y2="${H - axisH}" stroke="#c3c2b7" stroke-width="1"/>`;
+    rows.forEach((r, i) => {
+        const y = top + i * rowH + (rowH - barH) / 2;
+        g += `<text x="${labelW - 10}" y="${y + barH / 2 + 3.5}" text-anchor="end" font-size="11" fill="#52514e">${esc(r.p.label)}</text>`;
+        const active = r.segs.filter(s => s.km > 0);
+        let x = labelW;
+        active.forEach((s, j) => {
+            const w = sx(val(s.km)) - labelW, gap = j < active.length - 1 ? 2 : 0, wd = Math.max(w - gap, 1.5);
+            g += `<path d="${barEndPath(x, y, wd, barH, j === active.length - 1)}" fill="${s.hatch ? `url(#${s.hatch})` : s.color}"/>`;
+            const hx = Math.max(x - 2, labelW), hw = Math.max(w, 14) + 2;
+            g += `<rect class="stat-hit" ${tipAttrs(r.p.label + ' · ' + s.label, `${fmtKm(s.km)} · ${fmtPct(scopeKm ? 100 * s.km / scopeKm : 0)} du linéaire`, s.color)} x="${hx}" y="${y - 6}" width="${hw}" height="${barH + 12}" fill="transparent"/>`;
+            x += w;
+        });
+        g += `<text x="${(active.length ? x : labelW) + 8}" y="${y + barH / 2 + 3.5}" font-size="11" font-weight="600" fill="#0b0b0b">${r.total > 0 ? (statsUnit === 'pct' ? fmtPct(val(r.total)) : fmtKm(r.total)) : '–'}</text>`;
+    });
+    return `<svg class="stat-histo" viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="Linéaire affecté par pathologie, empilé par gravité et étendue">${g}</svg>`;
+}
+function histoLegend() {
+    return `<div class="stat-hleg">` + HCLASSES.map(c =>
+        `<span><svg width="16" height="10" aria-hidden="true"><rect width="16" height="10" rx="2" fill="${c.hatch ? `url(#${c.hatch})` : c.color}"/></svg>${esc(c.label)}</span>`).join('') + `</div>`;
+}
+function histoTable(rows, scopeKm) {
+    return `<table class="stat-table"><thead><tr><th>Pathologie</th>${HCLASSES.map(c => `<th>${esc(c.label)}</th>`).join('')}<th>Total</th><th>% du linéaire</th></tr></thead><tbody>` +
+        rows.map(r => `<tr><td>${esc(r.p.label)}</td>${r.segs.map(s => `<td>${fmtKm(s.km)}</td>`).join('')}<td><b>${fmtKm(r.total)}</b></td><td>${fmtPct(scopeKm ? 100 * r.total / scopeKm : 0)}</td></tr>`).join('') + `</tbody></table>`;
+}
+function histoCard(roads, scopeKm) {
+    const rows = histoData(roads);
+    const any = rows.some(r => r.total > 0);
+    const unitSw = `<span class="seg seg-sm" role="group" aria-label="Unité"><button class="${statsUnit === 'km' ? 'on' : ''}" onclick="setStatsUnit('km')">km</button><button class="${statsUnit === 'pct' ? 'on' : ''}" onclick="setStatsUnit('pct')">% du linéaire</button></span>`;
+    let body;
+    if (!scopeKm) body = '<p class="stat-empty">Aucun segment dans la sélection.</p>';
+    else if (!any) body = '<p class="stat-note">Aucune pathologie relevée (ou colonnes gravité / étendue vides) dans cette sélection.</p>';
+    else body = statsForm === 'table' ? histoTable(rows, scopeKm) : histoLegend() + histoSvg(rows, scopeKm);
+    return `<figure class="stat-card"><figcaption><span class="stat-title">Linéaire affecté par les pathologies</span>${statsForm === 'table' ? '' : unitSw}</figcaption>${body}</figure>`;
+}
+
+function renderStats() {
+    const roads = scopeRoads(), total = roads.reduce((a, f) => a + KM(f), 0);
+    $('statsScopeLabel').textContent = scopeLabel();
+    $('statsFormSwitch').innerHTML = [['pie', 'Camembert'], ['bars', 'Barres'], ['table', 'Tableau']].map(([k, l]) => `<button class="${statsForm === k ? 'on' : ''}" onclick="setStatsForm('${k}')">${l}</button>`).join('');
+    const etat = k => tally(roads, [...INDIC.map(i => ({ id: i.v, label: i.label, color: i.color })), NR], p => (filled(p[k]) && INDIC.some(i => i.v === Number(p[k]))) ? Number(p[k]) : '__nr');
+    const sol = tally(roads, [...SOLUTIONS.map(s => ({ id: s, label: s, color: SOLUTION_COLORS[s] })), NR], p => filled(p.solution) ? String(p.solution) : '__nr');
+    const { high, med } = CFG.prio;
+    const prio = tally(roads, [{ id: 'HIGH', label: `Prioritaire (≥ ${high})`, color: ST.crit }, { id: 'MED', label: `Moyenne (${med} – ${high})`, color: ST.warn }, { id: 'LOW', label: `Faible (< ${med})`, color: ST.good }, NR],
+        p => { const v = parseFloat(p.prio); return isNaN(v) ? '__nr' : prioClass(v); });
+    const prioKm = (prio.find(s => s.id === 'HIGH') || { km: 0 }).km;
+    const kpi = (l, v, s) => `<div class="kpi"><div class="l">${l}</div><div class="v">${v}</div><div class="s">${s}</div></div>`;
+    $('statsBody').innerHTML = `<div class="kpi-row">${kpi('Segments', fmtNum(roads.length, 0), 'dans la sélection')}${kpi('Linéaire', fmtKm(total), 'cumulé')}${kpi('Prioritaire', fmtKm(prioKm), fmtPct(total ? 100 * prioKm / total : 0) + ' du linéaire')}</div>` +
+        partCard('État de surface', 'linéaire par niveau', etat('etat_surf'), total) +
+        partCard('État de structure', 'linéaire par niveau', etat('etat_struct'), total) +
+        partCard('Solution de travaux préconisée', 'linéaire par solution', sol, total) +
+        partCard('Note de priorité', 'linéaire par niveau', prio, total) +
+        histoCard(roads, total);
+}
+function setStatsForm(f) { statsForm = f; renderStats(); }
+function setStatsUnit(u) { statsUnit = u; renderStats(); }
+
+function initStatsInteractions() {
+    const body = $('statsBody'), tip = $('statTip');
+    const hide = () => tip.classList.add('hidden');
+    const show = (el, x, y) => {
+        tip.replaceChildren();
+        const v = document.createElement('div'); v.className = 'tip-val'; v.textContent = el.dataset.val;
+        const n = document.createElement('div'); n.className = 'tip-name';
+        const k = document.createElement('span'); k.className = 'tip-key'; k.style.background = el.dataset.color || '#888';
+        n.append(k, document.createTextNode(el.dataset.name));
+        tip.append(v, n); tip.classList.remove('hidden');
+        const w = tip.offsetWidth, h = tip.offsetHeight;
+        tip.style.left = Math.max(4, Math.min(x + 14, window.innerWidth - w - 4)) + 'px';
+        tip.style.top = Math.max(4, Math.min(y + 16, window.innerHeight - h - 4)) + 'px';
+    };
+    body.addEventListener('pointermove', e => { const el = e.target.closest('[data-name]'); el ? show(el, e.clientX, e.clientY) : hide(); });
+    body.addEventListener('pointerleave', hide);
+    body.addEventListener('focusin', e => { const el = e.target.closest('[data-name]'); if (el) { const r = el.getBoundingClientRect(); show(el, r.left + r.width / 2, r.top); } });
+    body.addEventListener('focusout', hide);
 }
 
 /* =========================================================================
@@ -1152,6 +1750,7 @@ function uploadGeoJsonForRole(role, ev) {
 window.onload = function () {
     loadLocalCfg();
     initMap();
+    initStatsInteractions();
     buildStaticUI();
     initGristConnection();
 };

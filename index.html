@@ -68,6 +68,8 @@
         .stat-tip .tip-val { font-size: 12px; font-weight: 700; color: #0b0b0b; }
         .stat-tip .tip-name { font-size: 11px; color: #52514e; display: flex; align-items: center; gap: 6px; margin-top: 1px; }
         .stat-tip .tip-key { width: 8px; height: 8px; border-radius: 2px; flex: none; }
+        .commune-label { background: transparent; border: 0; box-shadow: none; padding: 0; font-weight: 700; font-size: 11px; color: #334155; text-shadow: 0 0 3px #fff, 0 0 3px #fff, 0 0 3px #fff; }
+        .commune-label::before { display: none; }
     </style>
 </head>
 <body class="bg-slate-100 text-slate-800 antialiased h-screen flex flex-col overflow-hidden">
@@ -90,7 +92,7 @@
             <button onclick="openMappingModal()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-2.5 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-colors" title="Assigner les tables Grist, les champs, importer des GeoJSON">
                 <i data-lucide="database" class="w-3.5 h-3.5 text-sky-400"></i>
                 <span class="hidden sm:inline">Tables &amp; champs</span>
-                <span id="assignedCountBadge" class="bg-sky-500/20 text-sky-300 border border-sky-500/30 text-[10px] px-1.5 rounded-full font-bold">0/3</span>
+                <span id="assignedCountBadge" class="bg-sky-500/20 text-sky-300 border border-sky-500/30 text-[10px] px-1.5 rounded-full font-bold">0/4</span>
             </button>
         </div>
     </header>
@@ -299,6 +301,10 @@
                     <span class="text-[10px] font-normal text-slate-400">Chaussée</span>
                 </div>
                 <div id="legendBody" class="space-y-1.5 max-h-48 overflow-y-auto custom-scrollbar"></div>
+                <div class="mt-2 pt-2 border-t border-slate-100 space-y-1">
+                    <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" id="communesToggle" checked onchange="onCommunesToggle()"><span class="w-4 inline-block shrink-0" style="border-top:2px dashed #334155"></span><span id="communesToggleText" class="text-slate-700">Limites communales</span></label>
+                    <label class="flex items-center gap-2 pl-6 text-slate-500 cursor-pointer"><input type="checkbox" id="communesLabels" onchange="onCommunesToggle()"> Afficher les noms</label>
+                </div>
             </div>
             <div id="toastNotification" class="hidden absolute top-4 left-1/2 -translate-x-1/2 z-[1020] bg-slate-900 text-white px-4 py-2 rounded-full shadow-xl text-xs font-medium flex items-center gap-2">
                 <i data-lucide="info" class="w-4 h-4 text-sky-400"></i><span id="toastMessage"></span>
@@ -389,7 +395,7 @@ const TECHNIQUES = SOLUTIONS.slice(1);
 const LEVELS_G = [{ v: 0, l: '0 · Aucune' }, { v: 1, l: '1 · Légère' }, { v: 2, l: '2 · Grave' }];
 const LEVELS_E = [{ v: 0, l: '0 · Nulle' }, { v: 1, l: '1 · Localisée' }, { v: 2, l: '2 · Généralisée' }];
 // Couleurs d'état (validées avec le script de la skill dataviz : bande de luminosité, séparation CVD, vision normale)
-const ST = { good: '#0ca30c', warn: '#eda100', orange: '#e0521a', crit: '#d03b3b', dark: '#9b1c1c', none: '#898781', etat_v_good: '#2b83ba', etat_good: '#c7e8ad', etat_bad: '#fec980', etat_v_bad: '#d7191c' };
+const ST = { good: '#0ca30c', warn: '#eda100', orange: '#e0521a', crit: '#d03b3b', dark: '#9b1c1c', none: '#898781' };
 const GRAVE = {
     'Absence de défauts':            { color: ST.good, weight: 4 },
     'Défauts légers et localisés':   { color: ST.warn, weight: 5, dashArray: '8, 6' },
@@ -398,10 +404,10 @@ const GRAVE = {
     'Défauts graves et généralisés': { color: ST.crit, weight: 6 }
 };
 const INDIC = [
-    { v: 0, label: '0 · Très bon état',     color: ST.etat_v_good },
-    { v: 1, label: '1 · Bon état',   color: ST.etat_good },
-    { v: 2, label: '2 · Dégradé',      color: ST.etat_bad },
-    { v: 3, label: '3 · Très dégradé', color: ST.etat_v_bad }
+    { v: 0, label: '0 · Bon état',     color: ST.good },
+    { v: 1, label: '1 · État moyen',   color: ST.warn },
+    { v: 2, label: '2 · Dégradé',      color: ST.orange },
+    { v: 3, label: '3 · Très dégradé', color: ST.dark }
 ];
 const DOMAN_COLORS = { 'VC RUES': '#f9a77a', 'VC PLACE': '#6cc24a', 'VC CHEMIN': '#6f6fcf', 'RD': '#e8d92a', 'CR': '#d6246e', 'À qualifier': '#8fd19e' };
 const SOLUTION_COLORS = { 'Aucune': ST.good, 'Entretien courant': '#6da7ec', 'ESU / MBCF': ST.warn, 'BB': ST.orange, 'Reprise structurelle / reprofilage': '#6250d6' };
@@ -446,15 +452,16 @@ const POLY_FIELDS = {
     sols:  [{ k: 'sol_type',   label: 'Type de sol support', c: ['type_sol', 'sol', 'nature', 'libelle'] },
             { k: 'portance',   label: 'Portance',            c: ['portance'] }],
     aleas: [{ k: 'alea_type',  label: 'Type d\'aléa',        c: ['type_alea', 'alea', 'risque', 'libelle'] },
-            { k: 'alea_niveau', label: 'Niveau d\'aléa',     c: ['niveau', 'intensite', 'aleas_niv'] }]
-    communes: [{ k: 'commune',    label: 'Nom de la commune',   c: ['nom_offici', 'commune', 'nom'] }]
+            { k: 'alea_niveau', label: 'Niveau d\'aléa',     c: ['niveau', 'intensite', 'aleas_niv'] }],
+    communes: [{ k: 'nom',   label: 'Nom de la commune', c: ['nom_offici', 'nom_commune', 'nom', 'commune', 'libelle'] },
+               { k: 'insee', label: 'Code INSEE',        c: ['insee_com', 'code_insee', 'insee'] }]
 };
 const GEOM_FIELD = FIELDS[0];
 const ROLES = [
     { k: 'chaussee', label: '1. Chaussée (segments linéaires)',      dot: 'bg-sky-600 rounded-full',   hint: /segment|chauss|filaire|troncon|voie/i },
     { k: 'sols',     label: '2. Types de sol support (polygones)',   dot: 'bg-orange-500 rounded-sm',  hint: /sol|geol|portance/i },
-    { k: 'aleas',    label: '3. Zonage aléas naturels (polygones)',  dot: 'bg-rose-600 rounded-sm',    hint: /alea|risque|rga|inond/i }
-    { k: 'communes', label: '4. Communes (polygones)',               dot: 'bg-violet-600 rounded-sm',  hint: /commune|nom_offici/i }
+    { k: 'aleas',    label: '3. Zonage aléas naturels (polygones)',  dot: 'bg-rose-600 rounded-sm',    hint: /alea|risque|rga|inond/i },
+    { k: 'communes', label: '4. Limites communales (polygones)',     dot: 'border-2 border-slate-600 rounded-sm', hint: /commune|limite|admin|delim|insee/i }
 ];
 const OBJECTS = {
     chaussee: ['Chaussée', 'route'], ouvrages: ['Ouvrages d\'art', 'landmark'],
@@ -472,7 +479,6 @@ const MODES = {
         ['age', 'Âge de la chaussée', 'Classes d\'âge : 0-5, 6-10, 11-15 ans…', 'clock', 'text-amber-500'],
         ['sol_support', 'Type de sol support', 'Couche polygone des sols + filaire par-dessus', 'map', 'text-orange-600'],
         ['segments_noeuds', 'Segments & nœuds d\'extrémité', 'Découpage en segments avec points début/fin', 'git-commit-horizontal', 'text-purple-600']
-        ['communes', 'Limites communales', 'Contours des communes + filaire voirie', 'map-pin', 'text-violet-600']
     ],
     usage: [
         ['trafic', 'Niveaux de trafic', 'Faible, moyen, fort', '', ''],
@@ -492,6 +498,7 @@ let CACHE = {};                                   // tables disponibles { id: {c
 let CFG = defaultCfg();                           // configuration persistée
 let DRAFT = null;                                 // copie de travail dans la modale
 let ASSIGNED = { chaussee: [], sols: [], aleas: [], communes: [] };
+let communesLayer = null;
 let polygonBgLayerGroup = null, roadLayerGroup = null, nodesLayerGroup = null;
 let LAYERS = new Map();                           // uid -> couche Leaflet des segments
 let EV = null;                                    // évaluateur de style courant
@@ -508,7 +515,7 @@ function mergeCfg(o) {
     const d = defaultCfg();
     if (!o || typeof o !== 'object') return d;
     return { tables: { ...d.tables, ...(o.tables || {}) },
-             map: { chaussee: { ...(o.map?.chaussee || {}) }, sols: { ...(o.map?.sols || {}) }, aleas: { ...(o.map?.aleas || {}) } },
+             map: { chaussee: { ...(o.map?.chaussee || {}) }, sols: { ...(o.map?.sols || {}) }, aleas: { ...(o.map?.aleas || {}) }, communes: { ...(o.map?.communes || {}) } },
              prio: { ...d.prio, ...(o.prio || {}) } };
 }
 function icons() { try { window.lucide && lucide.createIcons(); } catch (e) {} }
@@ -622,13 +629,14 @@ function applyConfig(zoom) {
         r._table = id && CACHE[id] ? id : '';
     });
     updateCommuneFilter();
+    renderCommunesLayer();
     if (selectedUid) {                                       // la fiche ouverte pointe vers le nouvel objet issu de la table
         selectedFeature = ASSIGNED.chaussee.find(f => uidOf(f) === selectedUid) || null;
         if (selectedFeature) switchInspectorTab(currentInspectorTab); else closeInspector();
     }
     rerenderMap();
     if (zoom) zoomToNetwork();
-    $('assignedCountBadge').textContent = `${ROLES.filter(r => ASSIGNED[r.k].length).length}/3`;
+    $('assignedCountBadge').textContent = `${ROLES.filter(r => ASSIGNED[r.k].length).length}/${ROLES.length}`;
     updatePrioFilterOptions();
 }
 const tableOfRole = role => ROLES.find(r => r.k === role)._table || '';
@@ -738,6 +746,8 @@ function demoData() {
     return {
         DEMO_Segments: seg,
         DEMO_Sols: { id: [1, 2], type_sol: ['Arène granitique altérée', 'Alluvions argilo-limoneuses'], portance: ['PF2', 'PF1'], geometry: [sq(4.3805, 46.0700, 4.3880, 46.0755), sq(4.3880, 46.0680, 4.3960, 46.0755)] },
+        DEMO_Communes: { id: [1, 2, 3], nom_offici: ['Thizy-les-Bourgs', 'Ronno', 'Amplepuis'], insee_com: ['69245', '69162', '69010'],
+                         geometry: [sq(4.3790, 46.0700, 4.3930, 46.0765), sq(4.3830, 46.0660, 4.3970, 46.0700), sq(4.3790, 46.0660, 4.3830, 46.0700)] },
         DEMO_Aleas: { id: [1, 2, 3], type_alea: ['RGA (Retrait-Gonflement Argiles)', 'Inondation / Ruissellement', 'Mouvement de terrain / Glissement'], niveau: ['Moyen', 'Fort', 'Fort'],
                       geometry: [sq(4.3875, 46.0682, 4.3955, 46.0745), sq(4.3835, 46.0695, 4.3895, 46.0725), sq(4.3810, 46.0720, 4.3860, 46.0752)] }
     };
@@ -745,7 +755,7 @@ function demoData() {
 function resetToDemoData() {
     const d = demoData();
     for (const id in d) registerTable(id, d[id], 'demo');
-    CFG.tables = { chaussee: 'DEMO_Segments', sols: 'DEMO_Sols', aleas: 'DEMO_Aleas' };
+    CFG.tables = { chaussee: 'DEMO_Segments', sols: 'DEMO_Sols', aleas: 'DEMO_Aleas', communes: 'DEMO_Communes' };
     closeMappingModal();
     applyConfig(true);
     showToast('Données de démonstration chargées.');
@@ -823,14 +833,16 @@ function initMap() {
     map = L.map('map', { zoomControl: false }).setView([46.0, 4.4], 11);
     L.control.zoom({ position: 'topright' }).addTo(map);
     L.control.scale({ imperial: false, position: 'bottomright' }).addTo(map);
-    const planClair = L.tileLayer('https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2&STYLE=normal&TILEMATRIXSET=PM&TILEMATRIX=){z}&TILEROW={y}&TILECOL={x}&FORMAT=image/png', { maxZoom: 19, attribution: '&copy; OpenStreetMap &copy; CARTO' }).addTo(map);
+    const planClair = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap &copy; CARTO' }).addTo(map);
     const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap' });
     const sat = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19, attribution: 'Tiles &copy; Esri' });
     L.control.layers({ 'Fond technique épuré': planClair, 'OpenStreetMap': osm, 'Orthophoto satellite': sat }, null, { position: 'topright' }).addTo(map);
     map.createPane('polygonsPane').style.zIndex = 350;
+    map.createPane('communesPane').style.zIndex = 360;
     map.createPane('roadsPane').style.zIndex = 450;
     map.createPane('nodesPane').style.zIndex = 500;
     map.on('moveend', onMapMoved);
+    renderCommunesLayer();
     roadRenderer = L.canvas({ pane: 'roadsPane', padding: 0.3 });     // rendu canvas : fluide avec plusieurs milliers de segments
 }
 
@@ -874,7 +886,6 @@ function rerenderMap(zoom) {
     $('progFilteredLength').textContent = km >= 1 ? `${km.toFixed(2)} km` : `${Math.round(km * 1000)} m`;
 
     if (currentViewTab === 'patrimoine' && currentPatrimoineMode === 'sol_support') renderSolsLayer();
-    else if (currentViewTab === 'patrimoine' && currentPatrimoineMode === 'communes') renderCommunesLayer();
     else if (currentViewTab === 'usage' && currentUsageMode === 'aleas') renderAleasLayer();
 
     EV = buildStyleEvaluator(roads);
@@ -926,33 +937,6 @@ function renderAleasLayer() {
     }).addTo(map);
 }
 
-function renderCommunesLayer() {
-    const communes = ASSIGNED.communes;
-    if (!communes.length) return showMissingDataWarning('Couche Communes non assignée', 'Assignez une table ou un fichier de communes dans « Tables & champs ».');
-    const selectedCommune = $('communeFilter').value;
-    polygonBgLayerGroup = L.geoJSON({ type: 'FeatureCollection', features: communes }, {
-        pane: 'polygonsPane',
-        style: f => {
-            const nom = nz(f.properties.commune);
-            const active = selectedCommune !== 'ALL' && nom === selectedCommune;
-            return {
-                color: active ? '#7c3aed' : '#64748b',
-                weight: active ? 2.5 : 1.5,
-                fillColor: active ? '#8b5cf6' : '#cbd5e1',
-                fillOpacity: active ? 0.22 : 0.10
-            };
-        },
-        onEachFeature: (f, l) => {
-            const nom = nz(f.properties.commune);
-            l.bindTooltip(`Commune : <strong>${esc(nom)}</strong>`, { sticky: true });
-            l.on('click', () => {
-                $('communeFilter').value = nom;
-                rerenderMap();
-            });
-        }
-    }).addTo(map);
-}
-    
 function renderSegmentEndpoints(roads) {
     const markers = [];
     roads.forEach(f => {
@@ -1015,11 +999,6 @@ function buildStyleEvaluator(roads) {
             return { title: 'Niveaux de trafic', items: [{ color: c.fort, label: 'Trafic fort' }, { color: c.moy, label: 'Trafic moyen' }, { color: c.faib, label: 'Trafic faible' }, { color: GREY, label: 'Non renseigné' }],
                      getStyle: f => { const v = String(f.properties.trafic ?? '').toLowerCase(); if (v.includes('fort') || v === '3') return { color: c.fort, weight: 6 }; if (v.includes('moy') || v === '2') return { color: c.moy, weight: 5 }; if (v.includes('faib') || v === '1') return { color: c.faib, weight: 4.5 }; return { color: GREY, weight: 4 }; } };
         }
-        if (m === 'communes') {
-            return {title: 'Communes', items: [{ color: '#64748b', label: 'Limite communale', isPoly: true },{ color: '#7c3aed', label: 'Commune filtrée active', isPoly: true }, { color: '#1e293b', label: 'Filaire voirie (superposé)' }],
-                    getStyle: () => ({ color: '#1e293b', weight: 4 })
-        };
-}
         if (m === 'fonction') return needed('fonction', 'Fonction de la voie', 'Fonction non renseignée') || levels('Fonction de la voie', 'fonction', ['Niveau 1 (structurant)', 'Niveau 2 (intermédiaire)', 'Niveau 3 (desserte locale)']);
         if (m === 'categorie') return needed('categorie', 'Catégorie de la voie', 'Catégorie non renseignée') || levels('Catégorie de la voie', 'categorie', ['Catégorie 1', 'Catégorie 2', 'Catégorie 3']);
         if (m === 'securite_tonnage') {
@@ -1150,6 +1129,29 @@ function switchInspectorTab(k) {
         const raw = Object.entries(p._raw).sort(([a], [b]) => a.localeCompare(b));
         box.innerHTML = card('Toutes les colonnes de la table', raw.map(([c, v]) => row(esc(c), v)).join(''));
     }
+}
+
+/* ---- Couche des limites communales : cochable sur toutes les vues, mémorisée dans le navigateur ---- */
+function loadCommunesPrefs() {
+    try { const v = JSON.parse(localStorage.getItem('sigvoirie.communes') || 'null'); if (v) { $('communesToggle').checked = v.on !== false; $('communesLabels').checked = !!v.labels; } } catch (e) {}
+}
+function onCommunesToggle() {
+    try { localStorage.setItem('sigvoirie.communes', JSON.stringify({ on: $('communesToggle').checked, labels: $('communesLabels').checked })); } catch (e) {}
+    renderCommunesLayer();
+}
+function renderCommunesLayer() {
+    if (!map) return;
+    if (communesLayer) { map.removeLayer(communesLayer); communesLayer = null; }
+    const feats = ASSIGNED.communes, tg = $('communesToggle');
+    tg.disabled = !feats.length; $('communesLabels').disabled = !feats.length;
+    $('communesToggleText').textContent = feats.length ? 'Limites communales' : 'Limites communales (table non assignée)';
+    if (!feats.length || !tg.checked) return;
+    const labels = $('communesLabels').checked;
+    communesLayer = L.geoJSON({ type: 'FeatureCollection', features: feats }, {
+        pane: 'communesPane', interactive: false,
+        style: () => ({ color: '#334155', weight: 2, opacity: 0.85, dashArray: '6, 5', fill: false }),
+        onEachFeature: (f, l) => { if (labels && f.properties.nom) l.bindTooltip(esc(f.properties.nom), { permanent: true, direction: 'center', className: 'commune-label' }); }
+    }).addTo(map);
 }
 
 function zoomToSelectedSegment() {
@@ -1787,6 +1789,7 @@ window.onload = function () {
     loadLocalCfg();
     initMap();
     initStatsInteractions();
+    loadCommunesPrefs();
     buildStaticUI();
     initGristConnection();
 };

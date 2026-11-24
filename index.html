@@ -130,8 +130,8 @@
                         <select id="communeFilter" onchange="rerenderMap(true)" class="w-full bg-white border border-slate-300 text-slate-800 text-xs rounded-lg p-1.5 font-medium outline-none focus:ring-2 focus:ring-sky-500"><option value="ALL">Toutes</option></select>
                     </div>
                     <div>
-                        <label for="priorityFilter" class="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-0.5">Priorité</label>
-                        <select id="priorityFilter" onchange="rerenderMap()" class="w-full bg-white border border-slate-300 text-slate-800 text-xs rounded-lg p-1.5 font-medium outline-none focus:ring-2 focus:ring-sky-500"><option value="ALL">Toutes</option></select>
+                        <label for="categoryFilter" class="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-0.5">Catégorie</label>
+                        <select id="categoryFilter" onchange="rerenderMap()" class="w-full bg-white border border-slate-300 text-slate-800 text-xs rounded-lg p-1.5 font-medium outline-none focus:ring-2 focus:ring-sky-500"><option value="ALL">Toutes</option></select>
                     </div>
                 </div>
                 <div class="relative">
@@ -395,7 +395,7 @@ const TECHNIQUES = SOLUTIONS.slice(1);
 const LEVELS_G = [{ v: 0, l: '0 · Aucune' }, { v: 1, l: '1 · Légère' }, { v: 2, l: '2 · Grave' }];
 const LEVELS_E = [{ v: 0, l: '0 · Nulle' }, { v: 1, l: '1 · Localisée' }, { v: 2, l: '2 · Généralisée' }];
 // Couleurs d'état (validées avec le script de la skill dataviz : bande de luminosité, séparation CVD, vision normale)
-const ST = { good: '#0ca30c', warn: '#eda100', orange: '#e0521a', crit: '#d03b3b', dark: '#9b1c1c', none: '#898781' };
+const ST = { good: '#0ca30c', warn: '#eda100', orange: '#e0521a', crit: '#d03b3b', dark: '#9b1c1c', none: '#898781', etat_v_good: '#2b83ba', etat_good: '#c7e8ad', etat_bad: '#fec980', etat_v_bad: '#d7191c' };
 const GRAVE = {
     'Absence de défauts':            { color: ST.good, weight: 4 },
     'Défauts légers et localisés':   { color: ST.warn, weight: 5, dashArray: '8, 6' },
@@ -404,10 +404,10 @@ const GRAVE = {
     'Défauts graves et généralisés': { color: ST.crit, weight: 6 }
 };
 const INDIC = [
-    { v: 0, label: '0 · Bon état',     color: ST.good },
-    { v: 1, label: '1 · État moyen',   color: ST.warn },
-    { v: 2, label: '2 · Dégradé',      color: ST.orange },
-    { v: 3, label: '3 · Très dégradé', color: ST.dark }
+    { v: 0, label: '0 · Très bon état',     color: ST.etat_v_good },
+    { v: 1, label: '1 · Bon état',   color: ST.etat_good },
+    { v: 2, label: '2 · Dégradé',      color: ST.etat_bad },
+    { v: 3, label: '3 · Très dégradé', color: ST.etat_v_bad }
 ];
 const DOMAN_COLORS = { 'VC RUES': '#f9a77a', 'VC PLACE': '#6cc24a', 'VC CHEMIN': '#6f6fcf', 'RD': '#e8d92a', 'CR': '#d6246e', 'À qualifier': '#8fd19e' };
 const SOLUTION_COLORS = { 'Aucune': ST.good, 'Entretien courant': '#6da7ec', 'ESU / MBCF': ST.warn, 'BB': ST.orange, 'Reprise structurelle / reprofilage': '#6250d6' };
@@ -504,7 +504,7 @@ let LAYERS = new Map();                           // uid -> couche Leaflet des s
 let EV = null;                                    // évaluateur de style courant
 let currentObject = 'chaussee', currentViewTab = 'patrimoine';
 let currentPatrimoineMode = 'filaire', currentUsageMode = 'trafic', currentPathoMode = 'pathologie_individuelle', currentProgMode = 'prio';
-let currentPriorityFilter = 'ALL';
+let currentCategoryFilter = 'ALL';
 let currentTool = 'carte', COLMAP = { chaussee: {}, sols: {}, aleas: {}, communes: {} }, LAST_EDIT = null, PENDING = null, statsForm = 'pie', statsUnit = 'km';
 let selectedFeature = null, selectedUid = null, currentInspectorTab = 'patrimoine';
 
@@ -637,7 +637,7 @@ function applyConfig(zoom) {
     rerenderMap();
     if (zoom) zoomToNetwork();
     $('assignedCountBadge').textContent = `${ROLES.filter(r => ASSIGNED[r.k].length).length}/${ROLES.length}`;
-    updatePrioFilterOptions();
+    updateCategoryFilterOptions();
 }
 const tableOfRole = role => ROLES.find(r => r.k === role)._table || '';
 
@@ -723,12 +723,12 @@ function initGristConnection() {
 function demoData() {
     const P = (g, e) => ({ g, e });
     const rows = [
-        ['VCC12', 'Chemin du Crêt', 'VC CHEMIN', 'Thizy-les-Bourgs', 420.5, 2, 3, 2, 'BB', 6.8, { fiss: P(2, 2), rep: P(1, 2), ndp: P(1, 1) }, [[4.3815, 46.0710], [4.3845, 46.0732], [4.3878, 46.0748]]],
-        ['VCC04', 'Chemin de la Roche', 'VC CHEMIN', 'Thizy-les-Bourgs', 680, 3, 2, 1, 'Entretien courant', 3.4, { fiss: P(1, 1), def_surf: P(1, 2) }, [[4.3878, 46.0748], [4.3910, 46.0730], [4.3948, 46.0712]]],
-        ['CR50', 'Chemin rural 50', 'CR', 'Ronno', 315.2, 3, 0, 0, 'Aucune', 1.6, {}, [[4.3845, 46.0732], [4.3860, 46.0702], [4.3895, 46.0685]]],
-        ['VCR07', 'Rue de l\'Église', 'VC RUES', 'Ronno', 145, 1, 3, 3, 'Reprise structurelle / reprofilage', 8.9, { fiss: P(2, 1), ndp: P(2, 2), def_c: P(2, 2) }, [[4.3895, 46.0685], [4.3935, 46.0692]]],
-        ['VCR21', 'Rue des Écoles', 'VC RUES', 'Amplepuis', 260, 1, 1, 1, 'ESU / MBCF', 4.2, { fiss: P(1, 2) }, [[4.3860, 46.0702], [4.3830, 46.0690]]],
-        ['VC?4B', '', 'À qualifier', 'Amplepuis', 190, null, 0, 0, 'Aucune', 2.0, {}, null]
+        ['VCC1', 'Route du Loup', 'CHEMIN', 'Thizy', 420.5, 2, 3, 2, 'BB', 6.8, { fiss: P(2, 2), rep: P(1, 2), ndp: P(1, 1) }, [[4.3815, 46.0710], [4.3845, 46.0732], [4.3878, 46.0748]]],
+        ['VCC2', 'Route de la Roche', 'CHEMIN', 'Thizy', 680, 3, 2, 1, 'Entretien courant', 3.4, { fiss: P(1, 1), def_surf: P(1, 2) }, [[4.3878, 46.0748], [4.3910, 46.0730], [4.3948, 46.0712]]],
+        ['CR1', 'Chemin du Moulin', 'CR', 'Ronno', 315.2, 3, 0, 0, 'Aucune', 1.6, {}, [[4.3845, 46.0732], [4.3860, 46.0702], [4.3895, 46.0685]]],
+        ['VCR1', 'Rue de la Mairie', 'RUES', 'Ronno', 145, 1, 3, 3, 'Reprise structurelle / reprofilage', 8.9, { fiss: P(2, 1), ndp: P(2, 2), def_c: P(2, 2) }, [[4.3895, 46.0685], [4.3935, 46.0692]]],
+        ['VCR2', 'Rue des Écoles', 'RUES', 'Amplepuis', 260, 1, 1, 1, 'ESU / MBCF', 4.2, { fiss: P(1, 2) }, [[4.3860, 46.0702], [4.3830, 46.0690]]],
+        ['VCR3', '', 'À qualifier', 'Amplepuis', 190, null, 0, 0, 'Aucune', 2.0, {}, null]
     ];
     const seg = { id: [], Pk: [], Num: [], Nom_voie: [], Classification: [], Commune: [], Longueur_m: [], Categorie: [], Ind_etat_surface: [], Ind_etat_structure: [], Solution: [], Note_prio: [], Annee_travaux: [], Technique_realisee: [], Date_releve: [], Geometrie: [] };
     ALL_PATHOS.forEach(p => { seg['G_' + p.k] = []; seg['E_' + p.k] = []; });
@@ -785,7 +785,7 @@ function buildStaticUI() {
         `<button onclick="switchInspectorTab('${k}')" id="inspTab-${k}" class="insp-tab py-1.5 px-1 rounded-md text-[10px] font-medium text-slate-600 hover:text-slate-900">${l}</button>`).join('');
     switchNetworkObject('chaussee', true);
     switchViewTab('patrimoine', true);
-    updatePrioFilterOptions();
+    updateCategoryFilterOptions();
     setTool('carte');
     icons();
 }
@@ -833,7 +833,7 @@ function initMap() {
     map = L.map('map', { zoomControl: false }).setView([46.0, 4.4], 11);
     L.control.zoom({ position: 'topright' }).addTo(map);
     L.control.scale({ imperial: false, position: 'bottomright' }).addTo(map);
-    const planClair = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap &copy; CARTO' }).addTo(map);
+    const planClair = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}',{maxZoom: 16,attribution: 'Tiles &copy; Esri'  }).addTo(map);
     const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap' });
     const sat = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19, attribution: 'Tiles &copy; Esri' });
     L.control.layers({ 'Fond technique épuré': planClair, 'OpenStreetMap': osm, 'Orthophoto satellite': sat }, null, { position: 'topright' }).addTo(map);
@@ -858,12 +858,15 @@ function prioClass(p) { return p >= CFG.prio.high ? 'HIGH' : p >= CFG.prio.med ?
 
 function visibleRoads() {
     const q = $('globalSearchInput').value.toLowerCase().trim();
-    const commune = $('communeFilter').value, pf = $('priorityFilter').value;
+    const commune = $('communeFilter').value, cf = $('categoryFilter') ? $('categoryFilter').value : 'ALL';
     return ASSIGNED.chaussee.filter(f => {
         const p = f.properties;
         if (commune !== 'ALL' && p.commune !== commune) return false;
         if (q && !`${p.num || ''} ${p.nom_voie || ''} ${p.commune || ''} ${p.id ?? ''}`.toLowerCase().includes(q)) return false;
-        if (pf !== 'ALL') { const pr = parseFloat(p.prio); if (isNaN(pr) || prioClass(pr) !== pf) return false; }
+        if (cf !== 'ALL') {
+            if (cf === '__EMPTY__') { if (filled(p.categorie)) return false; }
+            else if (String(p.categorie ?? '') !== cf) return false;
+        }
         return true;
     });
 }
@@ -1206,7 +1209,7 @@ function setTool(t) {
     setTimeout(() => map && map.invalidateSize(), 250);
 }
 
-/* ---- Étendue de travail : segments filtrés (commune, priorité, recherche) et, en option, emprise de la carte ---- */
+/* ---- Étendue de travail : segments filtrés (commune, catégorie, recherche) et, en option, emprise de la carte ---- */
 function scopeRoads() {
     const roads = visibleRoads();
     if (!$('viewportOnly').checked || !map) return roads;
@@ -1217,12 +1220,25 @@ function scopeLabel() {
     const parts = [];
     const c = $('communeFilter').value;
     parts.push(c === 'ALL' ? 'Toutes les communes' : c);
-    const pf = $('priorityFilter');
-    if (pf.value !== 'ALL') parts.push(pf.selectedOptions[0].text);
+    const cf = $('categoryFilter');
+    if (cf && cf.value !== 'ALL') parts.push('Catégorie : ' + cf.selectedOptions[0].text);
     const q = $('globalSearchInput').value.trim();
     if (q) parts.push('« ' + q + ' »');
     if ($('viewportOnly').checked) parts.push('emprise de la carte');
     return parts.join(' · ');
+}
+function updateCategoryFilterOptions() {
+    const sel = $('categoryFilter');
+    if (!sel) return;
+    const prev = sel.value;
+    const hasEmpty = ASSIGNED.chaussee.some(f => !filled(f.properties.categorie));
+    const cats = [...new Set(ASSIGNED.chaussee.map(f => f.properties.categorie).filter(filled).map(v => String(v)))]
+        .sort((a, b) => a.localeCompare(b, 'fr', { numeric: true }));
+    let html = `<option value="ALL">Toutes</option>` + cats.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('');
+    if (hasEmpty) html += `<option value="__EMPTY__">Non renseignée</option>`;
+    sel.innerHTML = html;
+    const valid = ['ALL', ...cats, ...(hasEmpty ? ['__EMPTY__'] : [])];
+    sel.value = valid.includes(prev) ? prev : 'ALL';
 }
 let toolTimer = null;
 function toolSignature() { return FIELDS.filter(f => f.kind).map(f => colOfKey(f.k) ? 1 : 0).join('') + editReadOnlyReason(); }
@@ -1236,12 +1252,7 @@ function onMapMoved() {
 }
 function onViewportToggle() { refreshToolPanel(); }
 
-function updatePrioFilterOptions() {
-    const sel = $('priorityFilter'), prev = sel.value, { high, med } = CFG.prio;
-    sel.innerHTML = [['ALL', 'Toutes'], ['HIGH', `Prioritaire (≥ ${high})`], ['MED', `Moyenne (${med} – ${high})`], ['LOW', `Faible (< ${med})`]]
-        .map(([v, l]) => `<option value="${v}">${l}</option>`).join('');
-    sel.value = prev || 'ALL';
-}
+
 
 /* =========================================================================
    10c. ÉDITION DES ATTRIBUTS (écriture dans la table Grist)

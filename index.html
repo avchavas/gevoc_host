@@ -447,12 +447,14 @@ const POLY_FIELDS = {
             { k: 'portance',   label: 'Portance',            c: ['portance'] }],
     aleas: [{ k: 'alea_type',  label: 'Type d\'aléa',        c: ['type_alea', 'alea', 'risque', 'libelle'] },
             { k: 'alea_niveau', label: 'Niveau d\'aléa',     c: ['niveau', 'intensite', 'aleas_niv'] }]
+    communes: [{ k: 'commune',    label: 'Nom de la commune',   c: ['nom_offici', 'commune', 'nom'] }]
 };
 const GEOM_FIELD = FIELDS[0];
 const ROLES = [
     { k: 'chaussee', label: '1. Chaussée (segments linéaires)',      dot: 'bg-sky-600 rounded-full',   hint: /segment|chauss|filaire|troncon|voie/i },
     { k: 'sols',     label: '2. Types de sol support (polygones)',   dot: 'bg-orange-500 rounded-sm',  hint: /sol|geol|portance/i },
     { k: 'aleas',    label: '3. Zonage aléas naturels (polygones)',  dot: 'bg-rose-600 rounded-sm',    hint: /alea|risque|rga|inond/i }
+    { k: 'communes', label: '4. Communes (polygones)',               dot: 'bg-violet-600 rounded-sm',  hint: /commune|nom_offici/i }
 ];
 const OBJECTS = {
     chaussee: ['Chaussée', 'route'], ouvrages: ['Ouvrages d\'art', 'landmark'],
@@ -470,6 +472,7 @@ const MODES = {
         ['age', 'Âge de la chaussée', 'Classes d\'âge : 0-5, 6-10, 11-15 ans…', 'clock', 'text-amber-500'],
         ['sol_support', 'Type de sol support', 'Couche polygone des sols + filaire par-dessus', 'map', 'text-orange-600'],
         ['segments_noeuds', 'Segments & nœuds d\'extrémité', 'Découpage en segments avec points début/fin', 'git-commit-horizontal', 'text-purple-600']
+        ['communes', 'Limites communales', 'Contours des communes + filaire voirie', 'map-pin', 'text-violet-600']
     ],
     usage: [
         ['trafic', 'Niveaux de trafic', 'Faible, moyen, fort', '', ''],
@@ -488,18 +491,18 @@ let isGristMode = false, READY = false, BOUND_TABLE = null;
 let CACHE = {};                                   // tables disponibles { id: {cols,data,rowIds,geomCol,count,source} }
 let CFG = defaultCfg();                           // configuration persistée
 let DRAFT = null;                                 // copie de travail dans la modale
-let ASSIGNED = { chaussee: [], sols: [], aleas: [] };
+let ASSIGNED = { chaussee: [], sols: [], aleas: [], communes: [] };
 let polygonBgLayerGroup = null, roadLayerGroup = null, nodesLayerGroup = null;
 let LAYERS = new Map();                           // uid -> couche Leaflet des segments
 let EV = null;                                    // évaluateur de style courant
 let currentObject = 'chaussee', currentViewTab = 'patrimoine';
 let currentPatrimoineMode = 'filaire', currentUsageMode = 'trafic', currentPathoMode = 'pathologie_individuelle', currentProgMode = 'prio';
 let currentPriorityFilter = 'ALL';
-let currentTool = 'carte', COLMAP = { chaussee: {}, sols: {}, aleas: {} }, LAST_EDIT = null, PENDING = null, statsForm = 'pie', statsUnit = 'km';
+let currentTool = 'carte', COLMAP = { chaussee: {}, sols: {}, aleas: {}, communes: {} }, LAST_EDIT = null, PENDING = null, statsForm = 'pie', statsUnit = 'km';
 let selectedFeature = null, selectedUid = null, currentInspectorTab = 'patrimoine';
 
 function defaultCfg() {
-    return { tables: {}, map: { chaussee: {}, sols: {}, aleas: {} }, prio: { high: 5, med: 3 } };
+    return { tables: {}, map: { chaussee: {}, sols: {}, aleas: {}, communes: {} }, prio: { high: 5, med: 3 } };
 }
 function mergeCfg(o) {
     const d = defaultCfg();
@@ -871,6 +874,7 @@ function rerenderMap(zoom) {
     $('progFilteredLength').textContent = km >= 1 ? `${km.toFixed(2)} km` : `${Math.round(km * 1000)} m`;
 
     if (currentViewTab === 'patrimoine' && currentPatrimoineMode === 'sol_support') renderSolsLayer();
+    else if (currentViewTab === 'patrimoine' && currentPatrimoineMode === 'communes') renderCommunesLayer();
     else if (currentViewTab === 'usage' && currentUsageMode === 'aleas') renderAleasLayer();
 
     EV = buildStyleEvaluator(roads);
@@ -922,6 +926,33 @@ function renderAleasLayer() {
     }).addTo(map);
 }
 
+function renderCommunesLayer() {
+    const communes = ASSIGNED.communes;
+    if (!communes.length) return showMissingDataWarning('Couche Communes non assignée', 'Assignez une table ou un fichier de communes dans « Tables & champs ».');
+    const selectedCommune = $('communeFilter').value;
+    polygonBgLayerGroup = L.geoJSON({ type: 'FeatureCollection', features: communes }, {
+        pane: 'polygonsPane',
+        style: f => {
+            const nom = nz(f.properties.commune);
+            const active = selectedCommune !== 'ALL' && nom === selectedCommune;
+            return {
+                color: active ? '#7c3aed' : '#64748b',
+                weight: active ? 2.5 : 1.5,
+                fillColor: active ? '#8b5cf6' : '#cbd5e1',
+                fillOpacity: active ? 0.22 : 0.10
+            };
+        },
+        onEachFeature: (f, l) => {
+            const nom = nz(f.properties.commune);
+            l.bindTooltip(`Commune : <strong>${esc(nom)}</strong>`, { sticky: true });
+            l.on('click', () => {
+                $('communeFilter').value = nom;
+                rerenderMap();
+            });
+        }
+    }).addTo(map);
+}
+    
 function renderSegmentEndpoints(roads) {
     const markers = [];
     roads.forEach(f => {
@@ -984,6 +1015,11 @@ function buildStyleEvaluator(roads) {
             return { title: 'Niveaux de trafic', items: [{ color: c.fort, label: 'Trafic fort' }, { color: c.moy, label: 'Trafic moyen' }, { color: c.faib, label: 'Trafic faible' }, { color: GREY, label: 'Non renseigné' }],
                      getStyle: f => { const v = String(f.properties.trafic ?? '').toLowerCase(); if (v.includes('fort') || v === '3') return { color: c.fort, weight: 6 }; if (v.includes('moy') || v === '2') return { color: c.moy, weight: 5 }; if (v.includes('faib') || v === '1') return { color: c.faib, weight: 4.5 }; return { color: GREY, weight: 4 }; } };
         }
+        if (m === 'communes') {
+            return {title: 'Communes', items: [{ color: '#64748b', label: 'Limite communale', isPoly: true },{ color: '#7c3aed', label: 'Commune filtrée active', isPoly: true }, { color: '#1e293b', label: 'Filaire voirie (superposé)' }],
+                    getStyle: () => ({ color: '#1e293b', weight: 4 })
+        };
+}
         if (m === 'fonction') return needed('fonction', 'Fonction de la voie', 'Fonction non renseignée') || levels('Fonction de la voie', 'fonction', ['Niveau 1 (structurant)', 'Niveau 2 (intermédiaire)', 'Niveau 3 (desserte locale)']);
         if (m === 'categorie') return needed('categorie', 'Catégorie de la voie', 'Catégorie non renseignée') || levels('Catégorie de la voie', 'categorie', ['Catégorie 1', 'Catégorie 2', 'Catégorie 3']);
         if (m === 'securite_tonnage') {

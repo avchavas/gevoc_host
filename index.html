@@ -115,11 +115,9 @@
                         <i data-lucide="panel-left-close" class="w-4 h-4"></i>
                     </button>
                 </div>
-                <div id="toolSwitch" class="grid grid-cols-3 gap-1 bg-slate-200/70 p-1 rounded-xl mb-2.5" role="group" aria-label="Outil">
-                    <button id="toolBtn-carte" onclick="setTool('carte')" class="tool-btn"><i data-lucide="map" class="w-3.5 h-3.5"></i>Carte</button>
-                    <button id="toolBtn-stats" onclick="setTool('stats')" class="tool-btn"><i data-lucide="chart-pie" class="w-3.5 h-3.5"></i>Statistiques</button>
-                    <button id="toolBtn-edit" onclick="setTool('edit')" class="tool-btn"><i data-lucide="pencil" class="w-3.5 h-3.5"></i>Édition</button>
-                </div>
+                <button id="statsToggleBtn" onclick="toggleStats()" class="w-full mb-2.5 py-2 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 border bg-white text-slate-700 border-slate-300 hover:bg-slate-100 transition-all" title="Afficher les statistiques dans le volet de droite">
+                    <i data-lucide="chart-pie" class="w-3.5 h-3.5 text-sky-600"></i><span>Statistiques du réseau</span>
+                </button>
                 <div class="grid grid-cols-4 gap-1" id="viewTabs"></div>
             </div>
 
@@ -139,7 +137,7 @@
                     <input type="text" id="globalSearchInput" oninput="rerenderMap()" placeholder="Rechercher un numéro de voie, nom, commune..." class="w-full pl-8 pr-7 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:bg-white focus:ring-2 focus:ring-sky-500 outline-none">
                     <button onclick="document.getElementById('globalSearchInput').value=''; rerenderMap();" class="absolute right-2.5 top-1.5 text-slate-400 hover:text-slate-600 text-xs" title="Effacer la recherche">✕</button>
                 </div>
-                <label class="flex items-center gap-2 text-[11px] text-slate-600 cursor-pointer"><input type="checkbox" id="viewportOnly" onchange="onViewportToggle()"> Limiter (statistiques et édition) à l'emprise visible de la carte</label>
+                <label class="flex items-center gap-2 text-[11px] text-slate-600 cursor-pointer"><input type="checkbox" id="viewportOnly" onchange="onViewportToggle()"> Limiter les statistiques à l'emprise visible de la carte</label>
             </div>
 
             <div id="chausseeViewsContainer" class="flex-1 overflow-y-auto p-3.5 space-y-4 custom-scrollbar">
@@ -171,10 +169,6 @@
                         <label class="block text-[11px] font-semibold text-slate-600 mb-1">Filtrer le type d'aléa naturel :</label>
                         <select id="aleaTypeSelect" onchange="rerenderMap()" class="w-full bg-white border border-slate-300 text-slate-800 text-xs rounded-lg p-2 font-medium focus:ring-2 focus:ring-sky-500 outline-none">
                             <option value="ALL">Tous les aléas naturels</option>
-                            <option value="RGA">RGA (Retrait-Gonflement des Argiles)</option>
-                            <option value="INONDATION">Inondation / Crue</option>
-                            <option value="GLISSEMENT">Mouvement de terrain / Glissement</option>
-                            <option value="CAVITE">Cavités souterraines</option>
                         </select>
                     </div>
                 </div>
@@ -248,35 +242,6 @@
                     </div>
                 </div>
 
-                <!-- Outil : statistiques -->
-                <div id="panel-stats" class="view-panel hidden space-y-3">
-                    <div class="flex items-start justify-between gap-2">
-                        <div class="min-w-0">
-                            <h2 class="text-xs font-bold uppercase tracking-wider text-slate-500">Statistiques</h2>
-                            <p id="statsScopeLabel" class="text-[11px] text-slate-500 mt-0.5"></p>
-                        </div>
-                        <span id="statsFormSwitch" class="seg shrink-0" role="group" aria-label="Forme du graphique"></span>
-                    </div>
-                    <div id="statsBody" class="stat-root space-y-3"></div>
-                </div>
-
-                <!-- Outil : édition des attributs -->
-                <div id="panel-edit" class="view-panel hidden space-y-3">
-                    <div>
-                        <h2 class="text-xs font-bold uppercase tracking-wider text-slate-500">Modifier les attributs</h2>
-                        <p class="text-[11px] text-slate-500 mt-0.5">Seuls les champs renseignés ci-dessous sont écrits ; « inchangé » laisse la table intacte.</p>
-                    </div>
-                    <div id="editReadOnly" class="hidden bg-rose-50 border border-rose-200 text-rose-800 rounded-xl p-3 text-xs"></div>
-                    <div id="editMissing" class="hidden bg-amber-50 border border-amber-200 text-amber-900 rounded-xl p-3 text-xs"></div>
-                    <div id="editTarget" class="bg-sky-50 border border-sky-200 rounded-xl p-3 space-y-1.5"></div>
-                    <button onclick="prefillWorksDone()" class="w-full text-left bg-white border border-slate-200 hover:bg-slate-50 rounded-xl p-2.5 text-xs"><b class="text-slate-800">Travaux réalisés : pré-remplir</b><br><span class="text-[11px] text-slate-500">Pathologies à 0, solution « Aucune », année en cours.</span></button>
-                    <div id="editForm" class="space-y-3"></div>
-                    <div id="editConfirm" class="hidden bg-sky-50 border border-sky-300 rounded-xl p-3 space-y-2"></div>
-                    <div class="flex flex-col gap-2 sticky bottom-0 bg-white/95 pt-2 pb-1">
-                        <button id="editApplyBtn" onclick="prepareEdit()" class="bg-sky-600 hover:bg-sky-700 text-white font-semibold px-3 py-2 rounded-lg text-xs">Appliquer…</button>
-                        <button id="editUndoBtn" onclick="undoLastEdit()" disabled class="opacity-50 bg-white border border-slate-300 text-slate-700 px-3 py-1.5 rounded-lg text-xs">Annuler la dernière modification</button>
-                    </div>
-                </div>
             </div>
 
             <div id="otherObjectPlaceholder" class="hidden flex-1 p-6 flex flex-col items-center justify-center text-center space-y-3 bg-slate-50/50">
@@ -313,10 +278,25 @@
 
         <div id="statTip" class="hidden stat-tip" role="tooltip"></div>
 
-        <!-- Fiche d'identification (tiroir droit) -->
+        <!-- Volet droit : fiche du segment (avec édition) ou statistiques -->
         <aside id="inspectorDrawer" class="hidden w-full sm:w-[360px] bg-white h-full z-[1006] border-l border-slate-200 shadow-2xl flex flex-col shrink-0 absolute right-0 top-0 transition-all">
-            <div class="bg-slate-900 text-white p-3.5 flex items-start justify-between gap-2">
-                <div class="min-w-0">
+            <div class="bg-slate-950 flex items-center justify-between gap-2 px-2.5 py-2 border-b border-slate-800">
+                <div class="flex gap-1" role="group" aria-label="Contenu du volet">
+                    <button id="rightTab-segment" onclick="showRight('segment')" class="px-3 py-1.5 rounded-lg text-xs font-semibold">Segment</button>
+                    <button id="rightTab-stats" onclick="showRight('stats')" class="px-3 py-1.5 rounded-lg text-xs font-semibold">Statistiques</button>
+                </div>
+                <button onclick="closeInspector()" class="p-1.5 bg-slate-800 hover:bg-slate-700 rounded-lg text-slate-300 hover:text-white transition-colors" title="Fermer le volet">
+                    <i data-lucide="x" class="w-4 h-4"></i>
+                </button>
+            </div>
+
+            <div id="segEmpty" class="hidden flex-1 p-6 flex flex-col items-center justify-center text-center space-y-2 text-slate-500">
+                <i data-lucide="mouse-pointer-click" class="w-7 h-7 text-slate-400"></i>
+                <p class="text-xs leading-relaxed max-w-[220px]">Cliquez sur un segment de la carte pour afficher sa fiche et pouvoir l'éditer.</p>
+            </div>
+
+            <div id="segContent" class="hidden flex-1 min-h-0 flex flex-col">
+                <div class="bg-slate-900 text-white p-3.5">
                     <div class="flex items-center gap-1.5">
                         <span id="inspBadgeNum" class="bg-sky-600 text-white text-[10px] font-bold px-2 py-0.5 rounded uppercase">--</span>
                         <span id="inspCommune" class="text-[11px] text-slate-300 truncate"></span>
@@ -327,17 +307,47 @@
                         <span id="inspId" class="flex items-center gap-1"></span>
                     </div>
                 </div>
-                <button onclick="closeInspector()" class="p-1.5 bg-slate-800 hover:bg-slate-700 rounded-lg text-slate-300 hover:text-white transition-colors" title="Fermer la fiche">
-                    <i data-lucide="x" class="w-4 h-4"></i>
-                </button>
+                <div class="grid grid-cols-5 bg-slate-100 border-b border-slate-200 p-1 gap-1" id="inspTabs"></div>
+                <div id="inspectorContent" class="flex-1 overflow-y-auto p-3.5 space-y-2 custom-scrollbar text-xs"></div>
+
+                <!-- Mode édition : un seul segment, le segment sélectionné -->
+                <div id="editPane" class="hidden flex-1 overflow-y-auto p-3.5 space-y-3 custom-scrollbar">
+                    <div>
+                        <h2 class="text-xs font-bold uppercase tracking-wider text-slate-500">Modifier les attributs du segment</h2>
+                        <p class="text-[11px] text-slate-500 mt-0.5">Seuls les champs dont vous changez la valeur sont écrits ; la valeur actuelle est rappelée dans chaque liste.</p>
+                    </div>
+                    <div id="editReadOnly" class="hidden bg-rose-50 border border-rose-200 text-rose-800 rounded-xl p-3 text-xs"></div>
+                    <div id="editMissing" class="hidden bg-amber-50 border border-amber-200 text-amber-900 rounded-xl p-3 text-xs"></div>
+                    <div id="editTarget" class="bg-sky-50 border border-sky-200 rounded-xl p-3 space-y-1"></div>
+                    <button onclick="prefillWorksDone()" class="w-full text-left bg-white border border-slate-200 hover:bg-slate-50 rounded-xl p-2.5 text-xs"><b class="text-slate-800">Travaux réalisés : pré-remplir</b><br><span class="text-[11px] text-slate-500">Pathologies à 0, solution « Aucune », année en cours.</span></button>
+                    <div id="editForm" class="space-y-3"></div>
+                    <div id="editConfirm" class="hidden bg-sky-50 border border-sky-300 rounded-xl p-3 space-y-2"></div>
+                    <div class="flex flex-col gap-2 sticky bottom-0 bg-white/95 pt-2 pb-1">
+                        <button id="editApplyBtn" onclick="prepareEdit()" class="bg-sky-600 hover:bg-sky-700 text-white font-semibold px-3 py-2 rounded-lg text-xs">Appliquer au segment…</button>
+                        <button id="editUndoBtn" onclick="undoLastEdit()" disabled class="opacity-50 bg-white border border-slate-300 text-slate-700 px-3 py-1.5 rounded-lg text-xs">Annuler la dernière modification</button>
+                    </div>
+                </div>
+
+                <div class="p-2.5 bg-slate-50 border-t border-slate-200 flex items-center justify-between text-[11px] text-slate-500">
+                    <button id="inspEditBtn" onclick="toggleEdit()" class="text-slate-600 hover:text-sky-800 font-semibold flex items-center gap-1"></button>
+                    <button onclick="zoomToSelectedSegment()" class="text-sky-600 hover:text-sky-800 font-semibold flex items-center gap-1">
+                        <i data-lucide="crosshair" class="w-3.5 h-3.5"></i> Zoomer sur le segment
+                    </button>
+                </div>
             </div>
-            <div class="grid grid-cols-5 bg-slate-100 border-b border-slate-200 p-1 gap-1" id="inspTabs"></div>
-            <div id="inspectorContent" class="flex-1 overflow-y-auto p-3.5 space-y-2 custom-scrollbar text-xs"></div>
-            <div class="p-2.5 bg-slate-50 border-t border-slate-200 flex items-center justify-between text-[11px] text-slate-500">
-                <button onclick="editSelectedSegment()" class="text-slate-600 hover:text-sky-800 font-semibold flex items-center gap-1"><i data-lucide="pencil" class="w-3.5 h-3.5"></i> Éditer ce segment</button>
-                <button onclick="zoomToSelectedSegment()" class="text-sky-600 hover:text-sky-800 font-semibold flex items-center gap-1">
-                    <i data-lucide="crosshair" class="w-3.5 h-3.5"></i> Zoomer sur le segment
-                </button>
+
+            <!-- Statistiques -->
+            <div id="statsPane" class="hidden flex-1 min-h-0 flex flex-col">
+                <div class="p-3.5 pb-2.5 border-b border-slate-200 flex items-start justify-between gap-2">
+                    <div class="min-w-0">
+                        <h2 class="text-xs font-bold uppercase tracking-wider text-slate-500">Statistiques</h2>
+                        <p id="statsScopeLabel" class="text-[11px] text-slate-500 mt-0.5"></p>
+                    </div>
+                    <span id="statsFormSwitch" class="seg shrink-0" role="group" aria-label="Forme du graphique"></span>
+                </div>
+                <div class="flex-1 overflow-y-auto p-3.5 custom-scrollbar">
+                    <div id="statsBody" class="stat-root space-y-3"></div>
+                </div>
             </div>
         </aside>
     </div>
@@ -505,7 +515,7 @@ let EV = null;                                    // évaluateur de style couran
 let currentObject = 'chaussee', currentViewTab = 'patrimoine';
 let currentPatrimoineMode = 'filaire', currentUsageMode = 'trafic', currentPathoMode = 'pathologie_individuelle', currentProgMode = 'prio';
 let currentCategoryFilter = 'ALL';
-let currentTool = 'carte', COLMAP = { chaussee: {}, sols: {}, aleas: {}, communes: {} }, LAST_EDIT = null, PENDING = null, statsForm = 'pie', statsUnit = 'km';
+let rightMode = 'segment', editing = false, COLMAP = { chaussee: {}, sols: {}, aleas: {}, communes: {} }, LAST_EDIT = null, PENDING = null, statsForm = 'pie', statsUnit = 'km';
 let selectedFeature = null, selectedUid = null, currentInspectorTab = 'patrimoine';
 
 function defaultCfg() {
@@ -629,6 +639,7 @@ function applyConfig(zoom) {
         r._table = id && CACHE[id] ? id : '';
     });
     updateCommuneFilter();
+    updateAleaFilterOptions();
     renderCommunesLayer();
     if (selectedUid) {                                       // la fiche ouverte pointe vers le nouvel objet issu de la table
         selectedFeature = ASSIGNED.chaussee.find(f => uidOf(f) === selectedUid) || null;
@@ -786,13 +797,12 @@ function buildStaticUI() {
     switchNetworkObject('chaussee', true);
     switchViewTab('patrimoine', true);
     updateCategoryFilterOptions();
-    setTool('carte');
     icons();
 }
 
 function switchNetworkObject(k, silent) {
     currentObject = k;
-    if (k !== 'chaussee' && currentTool !== 'carte') setTool('carte');
+    if (k !== 'chaussee') closeInspector();
     document.querySelectorAll('.obj-tab').forEach(b => { b.className = 'obj-tab px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-all text-slate-300 hover:text-white hover:bg-slate-800 shrink-0'; });
     $('objBtn-' + k).className = 'obj-tab px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all bg-sky-600 text-white shadow-sm shrink-0';
     $('activeObjectBadge').textContent = 'Objet : ' + OBJECTS[k][0];
@@ -810,7 +820,6 @@ function switchViewTab(k, silent) {
     $('viewTab-' + k).className = 'view-tab py-2 px-1 text-[11px] font-semibold border-b-2 border-sky-600 text-sky-700 bg-white rounded-t-lg flex flex-col items-center gap-1 transition-all';
     document.querySelectorAll('.view-panel').forEach(p => p.classList.add('hidden'));
     $('panel-' + k).classList.remove('hidden');
-    if (currentTool !== 'carte') { $('panel-' + k).classList.add('hidden'); $('panel-' + currentTool).classList.remove('hidden'); }
     if (selectedFeature) switchInspectorTab(k);
     if (!silent) rerenderMap();
 }
@@ -919,24 +928,37 @@ function renderSolsLayer() {
     }).addTo(map);
 }
 
-function aleaColor(txt) {
-    txt = String(txt || '').toLowerCase();
-    if (txt.includes('rga') || txt.includes('argile')) return '#d97706';
-    if (txt.includes('inond') || txt.includes('crue')) return '#2563eb';
-    if (txt.includes('gliss') || txt.includes('mouvement')) return '#dc2626';
-    return '#e11d48';
+// Types d'aléa présents dans la table assignée (champ « Type d'aléa »)
+const ALEA_PREF = [[/rga|argile/i, '#d97706'], [/cave/i, '#2563eb'], [/nappe/i, '#0891b2'], [/inond|crue|ruissell/i, '#1d4ed8'], [/gliss|mouvement|terrain/i, '#dc2626'], [/cavit/i, '#7c3aed']];
+const ALEA_FALLBACK = ['#db2777', '#4f46e5', '#059669', '#ca8a04', '#be123c', '#0d9488', '#9333ea'];
+function aleaTypes() { return [...new Set(ASSIGNED.aleas.map(f => nz(f.properties.alea_type)))].sort((a, b) => a.localeCompare(b, 'fr')); }
+function aleaColorMap() {                                   // une couleur stable par type (couleurs métier reconnues, sinon palette)
+    const map = {}; let i = 0;
+    aleaTypes().forEach(t => {
+        const pref = ALEA_PREF.find(([re]) => re.test(t));
+        map[t] = t === 'Non renseigné' ? GREY : pref ? pref[1] : ALEA_FALLBACK[i++ % ALEA_FALLBACK.length];
+    });
+    return map;
+}
+function updateAleaFilterOptions() {
+    const sel = $('aleaTypeSelect'); if (!sel) return;
+    const prev = sel.value, count = {};
+    ASSIGNED.aleas.forEach(f => { const t = nz(f.properties.alea_type); count[t] = (count[t] || 0) + 1; });
+    const types = aleaTypes();
+    sel.innerHTML = `<option value="ALL">Tous les aléas naturels</option>` + types.map(t => `<option value="${esc(t)}">${esc(t)} (${count[t]})</option>`).join('');
+    sel.value = types.includes(prev) ? prev : 'ALL';
 }
 function renderAleasLayer() {
     const all = ASSIGNED.aleas;
     if (!all.length) return showMissingDataWarning('Couche Aléas naturels non assignée', 'Le filaire reste affiché. Assignez une table de polygones dans « Tables & champs ».');
-    const sel = $('aleaTypeSelect').value;
-    const keys = { RGA: ['RGA', 'ARGILE'], INONDATION: ['INOND', 'CRUE'], GLISSEMENT: ['GLISS', 'MOUVEMENT', 'TERRAIN'], CAVITE: ['CAVIT'] };
-    const feats = all.filter(f => sel === 'ALL' || (keys[sel] || []).some(k => String(f.properties.alea_type || '').toUpperCase().includes(k)));
+    if (!all.some(f => filled(f.properties.alea_type))) showMissingDataWarning('Type d\'aléa non renseigné', 'Aucune valeur dans la colonne assignée à « Type d\'aléa ». Vérifiez « Tables & champs ».');
+    const sel = $('aleaTypeSelect').value, cm = aleaColorMap();
+    const feats = all.filter(f => sel === 'ALL' || nz(f.properties.alea_type) === sel);
     if (!feats.length) showMissingDataWarning('Aucun zonage pour cet aléa', "Aucune zone répertoriée pour le type d'aléa sélectionné.");
     polygonBgLayerGroup = L.geoJSON({ type: 'FeatureCollection', features: feats }, {
         pane: 'polygonsPane',
-        style: f => { const c = aleaColor(f.properties.alea_type); return { color: c, weight: 2, fillColor: c, fillOpacity: 0.35 }; },
-        onEachFeature: (f, l) => l.bindTooltip(`Aléa : <strong>${esc(nz(f.properties.alea_type))}</strong>${f.properties.alea_niveau ? ' (' + esc(f.properties.alea_niveau) + ')' : ''}`, { sticky: true })
+        style: f => { const c = cm[nz(f.properties.alea_type)] || GREY; return { color: c, weight: 2, fillColor: c, fillOpacity: 0.35 }; },
+        onEachFeature: (f, l) => l.bindTooltip(`Aléa : <strong>${esc(nz(f.properties.alea_type))}</strong>${filled(f.properties.alea_niveau) ? ' (niveau ' + esc(f.properties.alea_niveau) + ')' : ''}`, { sticky: true })
     }).addTo(map);
 }
 
@@ -995,7 +1017,11 @@ function buildStyleEvaluator(roads) {
 
     if (currentViewTab === 'usage') {
         const m = currentUsageMode;
-        if (m === 'aleas') return { title: 'Exposition aux aléas', items: [{ color: '#d97706', label: 'Zone RGA (argiles)', isPoly: true }, { color: '#2563eb', label: 'Zone inondation', isPoly: true }, { color: '#dc2626', label: 'Zone glissement', isPoly: true }, { color: '#e11d48', label: 'Autre aléa', isPoly: true }, { color: '#1e293b', label: 'Filaire voirie' }], getStyle: () => ({ color: '#1e293b', weight: 4 }) };
+        if (m === 'aleas') {
+            const cm = aleaColorMap(), sel = $('aleaTypeSelect').value;
+            const types = Object.keys(cm).filter(t => sel === 'ALL' || t === sel);
+            return { title: 'Type d\'aléa', items: [...types.map(t => ({ color: cm[t], label: t, isPoly: true })), { color: '#1e293b', label: 'Filaire voirie' }], getStyle: () => ({ color: '#1e293b', weight: 4 }) };
+        }
         if (m === 'trafic') {
             const a = needed('trafic', 'Niveaux de trafic', 'Trafic non renseigné'); if (a) return a;
             const c = { fort: '#dc2626', moy: '#f59e0b', faib: '#10b981' };
@@ -1069,7 +1095,6 @@ function openInspectorForFeature(f, zoom, fromGrist) {
     const prev = selectedUid;
     selectedFeature = f; selectedUid = uidOf(f);
     const p = f.properties;
-    $('inspectorDrawer').classList.remove('hidden');
     $('inspBadgeNum').textContent = p.num || 'SEGMENT';
     $('inspCommune').textContent = p.commune || 'Commune non renseignée';
     $('inspTitle').textContent = p.nom_voie || `Segment #${p.id ?? p._row}`;
@@ -1077,6 +1102,8 @@ function openInspectorForFeature(f, zoom, fromGrist) {
     $('inspLength').innerHTML = `<i data-lucide="ruler" class="w-3 h-3"></i> ${isNaN(len) ? 'Longueur N/C' : Math.round(len) + ' m'}`;
     $('inspId').innerHTML = `<i data-lucide="hash" class="w-3 h-3"></i> ${p.id ?? p._row}`;
     switchInspectorTab(currentViewTab);
+    showRight('segment');
+    if (editing && prev !== selectedUid) { renderEditForm(); updateEditTarget(); }
     [prev, selectedUid].forEach(u => { const l = u && LAYERS.get(u); if (l) l.setStyle(styleOf(l.feature)); });
     const sl = LAYERS.get(selectedUid); if (sl && sl.bringToFront) sl.bringToFront();
     if (isGristMode && !fromGrist && p._row && (!BOUND_TABLE || BOUND_TABLE === tableOfRole('chaussee'))) {
@@ -1088,8 +1115,10 @@ function openInspectorForFeature(f, zoom, fromGrist) {
 
 function closeInspector() {
     const prev = selectedUid;
+    stopEdit();
     selectedFeature = null; selectedUid = null;
     $('inspectorDrawer').classList.add('hidden');
+    updateStatsBtn();
     const l = prev && LAYERS.get(prev); if (l) l.setStyle(styleOf(l.feature));
 }
 
@@ -1185,29 +1214,65 @@ const FIELD_BY_KEY = Object.fromEntries(FIELDS.map(f => [f.k, f]));
 
 function applyToolVisibility() {
     const isCh = currentObject === 'chaussee';
-    $('toolSwitch').classList.toggle('hidden', !isCh);
+    $('statsToggleBtn').classList.toggle('hidden', !isCh);
     $('scopeBar').classList.toggle('hidden', !isCh);
-    $('viewTabs').classList.toggle('hidden', !isCh || currentTool !== 'carte');
+    $('viewTabs').classList.toggle('hidden', !isCh);
 }
 
-function setTool(t) {
-    currentTool = t;
-    ['carte', 'stats', 'edit'].forEach(k => {
-        $('toolBtn-' + k).className = 'tool-btn py-1.5 rounded-lg text-[11px] font-semibold flex items-center justify-center gap-1.5 transition-all ' +
-            (k === t ? 'bg-white text-sky-700 shadow-sm' : 'text-slate-600 hover:text-slate-900');
+/* ---- Volet droit : « Segment » (fiche + édition) ou « Statistiques » ---- */
+const drawerOpen = () => !$('inspectorDrawer').classList.contains('hidden');
+function showRight(mode) {
+    rightMode = mode;
+    if (mode === 'stats' && editing) stopEdit();
+    $('inspectorDrawer').classList.remove('hidden');
+    ['segment', 'stats'].forEach(m => {
+        $('rightTab-' + m).className = 'px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ' +
+            (m === mode ? 'bg-sky-600 text-white shadow-sm' : 'text-slate-300 hover:text-white hover:bg-slate-800');
     });
-    document.querySelectorAll('.view-panel').forEach(p => p.classList.add('hidden'));
-    if (t === 'carte') $('panel-' + currentViewTab).classList.remove('hidden');
-    $('panel-stats').classList.toggle('hidden', t !== 'stats');
-    $('panel-edit').classList.toggle('hidden', t !== 'edit');
-    const sb = $('leftSidebar');
-    sb.classList.remove('sm:w-[370px]', 'sm:w-[430px]', 'sm:w-[580px]');
-    sb.classList.add(t === 'stats' ? 'sm:w-[580px]' : t === 'edit' ? 'sm:w-[430px]' : 'sm:w-[370px]');
-    applyToolVisibility();
-    if (t === 'stats') renderStats();
-    if (t === 'edit') { renderEditForm(); updateEditTarget(); }
-    setTimeout(() => map && map.invalidateSize(), 250);
+    $('statsPane').classList.toggle('hidden', mode !== 'stats');
+    if (mode === 'stats') renderStats();
+    updateSegPane();
+    updateDrawerWidth();
+    updateStatsBtn();
 }
+function updateSegPane() {
+    const has = !!selectedFeature;
+    $('segContent').classList.toggle('hidden', rightMode !== 'segment' || !has);
+    $('segEmpty').classList.toggle('hidden', rightMode !== 'segment' || has);
+    $('inspTabs').classList.toggle('hidden', editing);
+    $('inspectorContent').classList.toggle('hidden', editing);
+    $('editPane').classList.toggle('hidden', !editing);
+    $('inspEditBtn').innerHTML = editing ? '<i data-lucide="arrow-left" class="w-3.5 h-3.5"></i> Retour à la fiche'
+                                         : '<i data-lucide="pencil" class="w-3.5 h-3.5"></i> Éditer ce segment';
+    icons();
+}
+function updateDrawerWidth() {
+    const d = $('inspectorDrawer');
+    d.classList.remove('sm:w-[360px]', 'sm:w-[430px]', 'sm:w-[580px]');
+    d.classList.add(rightMode === 'stats' ? 'sm:w-[580px]' : editing ? 'sm:w-[430px]' : 'sm:w-[360px]');
+}
+function updateStatsBtn() {
+    const b = $('statsToggleBtn'); if (!b) return;
+    const on = drawerOpen() && rightMode === 'stats';
+    b.className = 'w-full mb-2.5 py-2 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 border transition-all ' +
+        (b.classList.contains('hidden') ? 'hidden ' : '') +
+        (on ? 'bg-sky-600 text-white border-sky-600' : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-100');
+}
+function toggleStats() {
+    if (drawerOpen() && rightMode === 'stats') { if (selectedFeature) showRight('segment'); else closeInspector(); }
+    else showRight('stats');
+}
+function startEdit() {
+    if (!selectedFeature) return;
+    editing = true;
+    renderEditForm(); updateEditTarget(); updateSegPane(); updateDrawerWidth();
+}
+function stopEdit() {
+    editing = false;
+    cancelEdit();
+    updateSegPane(); updateDrawerWidth();
+}
+function toggleEdit() { editing ? stopEdit() : startEdit(); }
 
 /* ---- Étendue de travail : segments filtrés (commune, catégorie, recherche) et, en option, emprise de la carte ---- */
 function scopeRoads() {
@@ -1243,11 +1308,12 @@ function updateCategoryFilterOptions() {
 let toolTimer = null;
 function toolSignature() { return FIELDS.filter(f => f.kind).map(f => colOfKey(f.k) ? 1 : 0).join('') + editReadOnlyReason(); }
 function refreshToolPanel() {
-    if (currentTool === 'stats') renderStats();
-    else if (currentTool === 'edit') { if (toolSignature() !== editSig) renderEditForm(); updateEditTarget(); }
+    if (!drawerOpen()) return;
+    if (rightMode === 'stats') renderStats();
+    else if (editing) { if (toolSignature() !== editSig) renderEditForm(); updateEditTarget(); }
 }
 function onMapMoved() {
-    if (!$('viewportOnly').checked || currentTool === 'carte') return;
+    if (!$('viewportOnly').checked || rightMode !== 'stats' || !drawerOpen()) return;
     clearTimeout(toolTimer); toolTimer = setTimeout(refreshToolPanel, 250);
 }
 function onViewportToggle() { refreshToolPanel(); }
@@ -1257,7 +1323,7 @@ function onViewportToggle() { refreshToolPanel(); }
 /* =========================================================================
    10c. ÉDITION DES ATTRIBUTS (écriture dans la table Grist)
    ========================================================================= */
-let editTargetMode = 'scope', editSig = '', editBusy = false;
+let editSig = '', editBusy = false;
 const EDIT_GROUPS = [
     { title: 'Travaux réalisés', keys: ['annee_travaux', 'technique'] },
     { title: 'État de la section', keys: ['etat_surf', 'etat_struct'] },
@@ -1283,15 +1349,17 @@ const clearValue = f => (f.t === 'Text' || f.t === 'Choice') ? '' : null;
 
 function editControl(f) {
     const dis = colOfKey(f.k) ? '' : 'disabled';
+    const cur = selectedFeature ? selectedFeature.properties[f.k] : undefined;
+    const curTxt = !filled(cur) ? 'non renseigné' : f.kind === 'level' ? ((f.levels.find(o => o.v === Number(cur)) || { l: String(cur) }).l) : String(cur);
     const base = 'w-full bg-white border border-slate-300 rounded-lg p-1.5 text-xs outline-none focus:ring-2 focus:ring-sky-500 disabled:bg-slate-100 disabled:text-slate-400';
     if (f.kind === 'level' || f.kind === 'choice') {
         const opts = f.kind === 'level' ? f.levels.map(o => `<option value="${o.v}">${esc(o.l)}</option>`)
                                          : choicesFor(f).map(o => `<option value="${esc(o)}">${esc(o)}</option>`);
-        return `<select data-ek="${f.k}" ${dis} class="${base}"><option value="">— inchangé —</option>${opts.join('')}<option value="__clear__">∅ Effacer</option></select>`;
+        return `<select data-ek="${f.k}" ${dis} class="${base}"><option value="">${esc(curTxt)} (actuel)</option>${opts.join('')}<option value="__clear__">∅ Effacer</option></select>`;
     }
     const type = f.kind === 'text' ? 'text' : 'number';
     const attrs = f.kind === 'year' ? 'min="1900" max="2100" step="1"' : f.kind === 'number' ? 'min="0" step="0.1"' : '';
-    return `<div class="flex gap-1"><input data-ek="${f.k}" type="${type}" ${attrs} placeholder="inchangé" ${dis} class="${base}">
+    return `<div class="flex gap-1"><input data-ek="${f.k}" type="${type}" ${attrs} placeholder="${esc(filled(cur) ? curTxt + ' (actuel)' : 'non renseigné')}" ${dis} class="${base}">
         <button type="button" data-clear-for="${f.k}" ${dis} onclick="toggleClear('${f.k}')" class="shrink-0 px-2 rounded-lg border border-slate-300 bg-white text-slate-500 hover:bg-slate-100 text-xs disabled:opacity-40" title="Effacer la valeur dans la table">∅</button></div>`;
 }
 function toggleClear(k) {
@@ -1326,21 +1394,14 @@ function renderEditForm() {
     cancelEdit();
 }
 
-function setEditTarget(v) { editTargetMode = v; updateEditTarget(); }
 function updateEditTarget() {
-    const roads = scopeRoads(), km = roads.reduce((a, f) => a + KM(f), 0), sel = selectedFeature;
-    if (editTargetMode === 'selection' && !sel) editTargetMode = 'scope';
-    const n = getEditFeatures().length;
-    $('editTarget').innerHTML = `
-        <div class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Segments concernés</div>
-        <label class="flex items-start gap-2 cursor-pointer text-xs"><input type="radio" name="editTarget" value="scope" ${editTargetMode === 'scope' ? 'checked' : ''} onchange="setEditTarget('scope')" class="mt-0.5">
-            <span><b>Tous les segments visibles</b> : ${roads.length} segment${roads.length > 1 ? 's' : ''} · ${fmtKm(km)}<br><span class="text-[11px] text-slate-500">${esc(scopeLabel())}</span></span></label>
-        <label class="flex items-start gap-2 text-xs ${sel ? 'cursor-pointer' : 'opacity-50'}"><input type="radio" name="editTarget" value="selection" ${editTargetMode === 'selection' ? 'checked' : ''} ${sel ? '' : 'disabled'} onchange="setEditTarget('selection')" class="mt-0.5">
-            <span><b>Segment sélectionné</b> ${sel ? ': ' + esc(sel.properties.num || '') + ' (n° ' + esc(sel.properties.id ?? sel.properties._row) + ')' : ': cliquez sur un segment de la carte'}</span></label>`;
-    $('editApplyBtn').textContent = `Appliquer à ${n} segment${n > 1 ? 's' : ''}…`;
+    const p = selectedFeature ? selectedFeature.properties : null;
+    $('editTarget').innerHTML = p
+        ? `<div class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Segment modifié</div>
+           <div class="text-xs"><b>${esc(p.num || 'Segment')}</b>${p.nom_voie ? ' · ' + esc(p.nom_voie) : ''}<br><span class="text-[11px] text-slate-500">${esc(p.commune || 'Commune non renseignée')} · n° ${esc(p.id ?? p._row)}${filled(p.longueur) ? ' · ' + Math.round(p.longueur) + ' m' : ''}</span></div>`
+        : '<div class="text-xs text-slate-500">Aucun segment sélectionné.</div>';
 }
-function getEditFeatures() { return (editTargetMode === 'selection' && selectedFeature) ? [selectedFeature] : scopeRoads(); }
-function editSelectedSegment() { if (!selectedFeature) return; editTargetMode = 'selection'; setTool('edit'); }
+function getEditFeatures() { return selectedFeature ? [selectedFeature] : []; }
 
 function collectEdits() {
     const edits = {}, errors = [];
@@ -1373,12 +1434,12 @@ function prepareEdit() {
     const keys = Object.keys(edits);
     if (!keys.length) return showToast('Aucune modification saisie.');
     const feats = getEditFeatures();
-    if (!feats.length) return showToast('Aucun segment concerné.');
+    if (!feats.length) return showToast('Sélectionnez un segment sur la carte.');
     PENDING = { edits, feats };
-    const km = feats.reduce((a, f) => a + KM(f), 0);
+    const sp = feats[0].properties;
     $('editConfirm').classList.remove('hidden');
     $('editConfirm').innerHTML = `
-        <div class="font-semibold text-sky-900 text-xs">Confirmer la modification de ${feats.length} segment${feats.length > 1 ? 's' : ''} (${fmtKm(km)}) ?</div>
+        <div class="font-semibold text-sky-900 text-xs">Confirmer la modification du segment ${esc(sp.num || ('n° ' + (sp.id ?? sp._row)))} ?</div>
         <ul class="text-[11px] text-slate-700 space-y-0.5 max-h-40 overflow-y-auto">${keys.map(k => `<li>• ${esc(FIELD_BY_KEY[k].label)} → <b>${describeEdit(k, edits[k])}</b></li>`).join('')}</ul>
         <p class="text-[11px] text-slate-500">Les autres colonnes ne sont pas touchées. Vous pourrez annuler cette modification juste après.</p>
         <div class="flex gap-2"><button id="editConfirmBtn" onclick="confirmEdit()" class="bg-sky-600 hover:bg-sky-700 text-white font-semibold px-3 py-1.5 rounded-lg text-xs">Confirmer l'écriture dans la table</button>
@@ -1394,7 +1455,7 @@ function setEditBusy(b) {
 function updateUndoButton() {
     const b = $('editUndoBtn');
     b.disabled = !LAST_EDIT; b.classList.toggle('opacity-50', !LAST_EDIT);
-    b.textContent = LAST_EDIT ? `Annuler la dernière modification (${LAST_EDIT.rowIds.length} segments)` : 'Annuler la dernière modification';
+    b.textContent = 'Annuler la dernière modification';
 }
 
 // Envoie { colonne: [valeurs] } pour les lignes rowIds ; Grist : une seule transaction (BulkUpdateRecord par lots)
@@ -1437,7 +1498,7 @@ async function confirmEdit() {
         const n = await writeEdits(PENDING);
         cancelEdit();
         renderEditForm();
-        showToast(`${n} segment${n > 1 ? 's' : ''} mis à jour dans la table.`);
+        showToast('Segment mis à jour dans la table.');
     } catch (e) {
         console.error(e);
         showToast('Écriture impossible : ' + ((e && e.message) ? e.message : e) + ' (droits d\'accès ?)');
@@ -1450,6 +1511,7 @@ async function undoLastEdit() {
         await sendUpdate(LAST_EDIT.tid, LAST_EDIT.rowIds, LAST_EDIT.old);
         showToast('Dernière modification annulée.');
         LAST_EDIT = null;
+        if (editing) renderEditForm();
     } catch (e) { showToast('Annulation impossible : ' + ((e && e.message) ? e.message : e)); }
     finally { setEditBusy(false); updateUndoButton(); }
 }
